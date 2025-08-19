@@ -9,8 +9,19 @@ export default function App() {
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    console.log("API Key saved:", apiKey);
-    setSaved(true);
+    // Check if api key is empty
+    if (!apiKey.trim()) {
+      alert("Please enter a valid API key.");
+      return;
+    }
+
+    // Save the API key to Chrome storage
+    chrome.storage.local.set({ apiKey }, () => {
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+      }, 2000);
+    });
   };
 
 
