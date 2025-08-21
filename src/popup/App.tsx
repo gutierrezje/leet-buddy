@@ -1,5 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export default function App() {
   const handleOpenOptions = () => {
@@ -8,7 +14,10 @@ export default function App() {
 
   const handleOpenSidePanel = async () => {
     // Get the current tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
 
     if (tab) {
       // Open the side panel for the current tab
@@ -22,15 +31,16 @@ export default function App() {
         <CardHeader className="">
           <div>
             <CardTitle className="text-white">LeetBuddy</CardTitle>
-            <CardDescription className="">AI Technical Interview Assistant</CardDescription>
+            <CardDescription className="">
+              AI Technical Interview Assistant
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <Button onClick={handleOpenSidePanel}>Open chat</Button>
           <Button onClick={handleOpenOptions}>Open Options</Button>
         </CardContent>
-
       </Card>
     </div>
-  )
+  );
 }

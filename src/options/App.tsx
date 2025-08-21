@@ -1,17 +1,23 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Save, CheckCircle } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { Save, CheckCircle } from 'lucide-react';
 
 export default function App() {
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
     // Check if api key is empty
     if (!apiKey.trim()) {
-      alert("Please enter a valid API key.");
+      alert('Please enter a valid API key.');
       return;
     }
 
@@ -24,7 +30,6 @@ export default function App() {
     });
   };
 
-
   return (
     <div className="min-h-screen p-4">
       <div className="text-center mb-4">
@@ -32,8 +37,12 @@ export default function App() {
       </div>
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">Google AI Studio API Key</CardTitle>
-          <CardDescription className="">Enter your Gemini API key to enable below.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Google AI Studio API Key
+          </CardTitle>
+          <CardDescription className="">
+            Enter your Gemini API key to enable below.
+          </CardDescription>
         </CardHeader>
         <CardContent className="">
           <label htmlFor="api-key" className="block mb-2 text-sm font-medium">
@@ -47,10 +56,7 @@ export default function App() {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Type in your API key here..."
             />
-            <Button
-              onClick={handleSave}
-              disabled={saved}
-            >
+            <Button onClick={handleSave} disabled={saved}>
               {saved ? (
                 <>
                   <CheckCircle className="" />
@@ -65,7 +71,6 @@ export default function App() {
             </Button>
           </div>
         </CardContent>
-        
       </Card>
     </div>
   );

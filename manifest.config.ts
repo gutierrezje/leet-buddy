@@ -1,5 +1,5 @@
-import { defineManifest } from '@crxjs/vite-plugin'
-import pkg from './package.json'
+import { defineManifest } from '@crxjs/vite-plugin';
+import pkg from './package.json';
 
 export default defineManifest({
   manifest_version: 3,
@@ -14,15 +14,13 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
-  permissions: [
-    'sidePanel',
-    'contentSettings',
-    'storage',
+  permissions: ['sidePanel', 'contentSettings', 'storage'],
+  content_scripts: [
+    {
+      js: ['src/content/main.tsx'],
+      matches: ['https://leetcode.com/*'],
+    },
   ],
-  content_scripts: [{
-    js: ['src/content/main.tsx'],
-    matches: ['https://leetcode.com/*',],
-  }],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
   },
@@ -31,4 +29,4 @@ export default defineManifest({
     service_worker: 'src/background/main.ts',
     type: 'module',
   },
-})
+});

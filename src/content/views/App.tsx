@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
 
 function App() {
-  const [show, setShow] = useState(false)
-  const toggle = () => setShow(!show)
+  const [show, setShow] = useState(false);
+  const toggle = () => setShow(!show);
 
   return (
     <div className="popup-container">
@@ -12,10 +12,9 @@ function App() {
           <h1>HELLO CRXJS</h1>
         </div>
       )}
-      <button className="toggle-button" onClick={toggle}>
-      </button>
+      <button className="toggle-button" onClick={toggle}></button>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

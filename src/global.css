@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -119,17 +119,17 @@
   }
 } */
 
-
 @layer base {
-    * {
-        @apply border-border;
-    }
+  * {
+    @apply border-border;
+  }
 
-    body {
-        @apply text-foreground;
-    }
+  body {
+    @apply text-foreground;
+  }
 
-    html, body {
-        background-color: transparent;
-    }
+  html,
+  body {
+    background-color: transparent;
+  }
 }

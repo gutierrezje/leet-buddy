@@ -6,10 +6,17 @@ import { Card } from '@/components/ui/card';
 import { Send } from 'lucide-react';
 import { Message } from './types';
 
+import exampleMessages from './data/messages.json'; // Assuming you have some example messages
 
 export default function App() {
   const [problemTitle, setProblemTitle] = useState('Loading problem title...');
   const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    // Load example messages
+    setMessages(exampleMessages as Message[]);
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
 
@@ -20,7 +27,7 @@ export default function App() {
       if (activeTab && activeTab.id) {
         // Send a message to the content script in the active tab
         chrome.tabs.sendMessage(
-          activeTab.id, 
+          activeTab.id,
           { type: 'GET_PROBLEM_TITLE' },
           (response) => {
             // Handle potential errors before setting state
@@ -40,27 +47,34 @@ export default function App() {
     });
   }, []);
 
-  const handleSendMessage = (messageText: string) => {
-
-  }
+  const handleSendMessage = (messageText: string) => {};
 
   return (
     <div className="w-full h-screen flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-start justify-between flex-col">
           <h1 className="text-lg font-semibold text-gray-800">LeetBuddy</h1>
-          <span className="text-sm text-gray-500">Current problem: {problemTitle}</span>
+          <span className="text-sm text-gray-500">
+            Current problem: {problemTitle}
+          </span>
         </div>
       </div>
 
       {/* Message List */}
-      <ScrollArea className="flex-1 p-4">
-
+      <ScrollArea className="flex-1 p-4 overflow-hidden">
+        {messages.map((message) => (
+          <Card key={message.id} className="mb-2">
+            <div className="flex items-start">
+              <span className="font-semibold">{message.sender}:</span>
+              <span className="ml-2">{message.text}</span>
+            </div>
+          </Card>
+        ))}
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 flex gap-2">
+      <div className="p-4 flex gap-2 flex-shrink-0">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -70,19 +84,17 @@ export default function App() {
               e.preventDefault();
               handleSendMessage(input);
             }
-          
           }}
         />
 
         <Button
           size="icon"
           onClick={() => handleSendMessage(input)}
-          disabled={!input.trim()}
+          disabled={!input.trim() || loading}
         >
           <Send className="h-4 w-4" />
         </Button>
       </div>
-      
     </div>
-  )
+  );
 }
