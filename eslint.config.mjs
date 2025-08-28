@@ -3,11 +3,11 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
-import { defineConfig } from "eslint/config";
-import { includeIgnoreFile } from "@eslint/compat";
-import { fileURLToPath } from "node:url";
+import { defineConfig } from 'eslint/config';
+import { includeIgnoreFile } from '@eslint/compat';
+import { fileURLToPath } from 'node:url';
 
-const gitignorePath = fileURLToPath(new URL(".gitignore", import.meta.url));
+const gitignorePath = fileURLToPath(new URL('.gitignore', import.meta.url));
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -21,5 +21,5 @@ export default tseslint.config(
     },
   },
 
-  includeIgnoreFile(gitignorePath, "Imported .gitignore patterns"),
+  includeIgnoreFile(gitignorePath, 'Imported .gitignore patterns')
 );

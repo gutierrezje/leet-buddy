@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Send } from 'lucide-react';
 import { Message } from './types';
 
 import exampleMessages from './data/messages.json'; // Assuming you have some example messages
+import ChatMessage from './components/ChatMessage';
 
 export default function App() {
   const [problemTitle, setProblemTitle] = useState('Loading problem title...');
@@ -62,14 +62,9 @@ export default function App() {
       </div>
 
       {/* Message List */}
-      <ScrollArea className="flex-1 p-4 overflow-hidden">
+      <ScrollArea className="flex flex-1 p-4 overflow-hidden">
         {messages.map((message) => (
-          <Card key={message.id} className="mb-2">
-            <div className="flex items-start">
-              <span className="font-semibold">{message.sender}:</span>
-              <span className="ml-2">{message.text}</span>
-            </div>
-          </Card>
+          <ChatMessage key={message.id} message={message} />
         ))}
       </ScrollArea>
 
