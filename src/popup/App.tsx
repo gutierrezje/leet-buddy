@@ -37,8 +37,8 @@ export default function App() {
           </div>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
-          <Button onClick={handleOpenSidePanel}>Open chat</Button>
-          <Button onClick={handleOpenOptions}>Open Options</Button>
+          <Button onClick={handleOpenSidePanel}>Open LeetBuddy</Button>
+          <Button onClick={handleOpenOptions}>Open Configuration</Button>
         </CardContent>
       </Card>
     </div>

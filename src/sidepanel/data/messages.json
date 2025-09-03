@@ -1,45 +1,8 @@
 [
   {
-    "id": 1715886000,
+    "id": "1715886000",
     "sender": "ai",
     "text": "Hello! I'm here to help you practice your technical interview skills. Let's start with this problem. What's your initial approach or thought process for solving it?",
     "timestamp": 1715886000000
-  },
-  {
-    "id": 1715886060,
-    "sender": "user",
-    "text": "Okay, I'm looking at the \"Insert Interval\" problem. I have the list of existing intervals and the new interval to insert. Where should I start?",
-    "timestamp": 1715886060000
-  },
-  {
-    "id": 1715886120,
-    "sender": "ai",
-    "text": "To begin, can you first think about the different scenarios that might occur when you try to insert a new interval into a sorted list of non-overlapping intervals? Consider how the new interval might relate to the existing ones.",
-    "timestamp": 1715886120000
-  },
-  {
-    "id": 1715886180,
-    "sender": "user",
-    "text": "Hmm, okay. The new interval could be completely before all the existing ones, completely after all of them, or it could overlap with some or all of them.",
-    "timestamp": 1715886180000
-  },
-  {
-    "id": 1715886240,
-    "sender": "ai",
-    "text": "That's a great initial categorization. Can you elaborate on what happens when the new interval overlaps with one or more of the existing intervals? What needs to be considered in those cases?",
-    "timestamp": 1715886240000
-  },
-  {
-    "id": 1715886300,
-    "sender": "user",
-    "text": "If it overlaps, I guess I need to merge it with the overlapping intervals. That would involve finding the minimum start and the maximum end of all the merged intervals.",
-    "timestamp": 1715886300000
-  },
-  {
-    "id": 1715886360,
-    "sender": "ai",
-    "text": "",
-    "timestamp": 1715886360000,
-    "isLoading": true
   }
 ]

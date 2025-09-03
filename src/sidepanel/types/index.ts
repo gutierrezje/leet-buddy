@@ -1,7 +1,7 @@
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = 'user' | 'ai' | 'system';
 
 export interface Message {
-  id: number;
+  id: string;
   sender: MessageRole;
   text: string;
   timestamp: number;
