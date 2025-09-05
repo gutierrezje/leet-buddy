@@ -7,12 +7,23 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import { Save, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, CheckCircle, Trash2 } from 'lucide-react';
 
 export default function App() {
   const [apiKey, setApiKey] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [isKeySaved, setIsKeySaved] = useState(false);
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
+
+  // On component mount, check if an API key is already saved
+  useEffect(() => {
+    chrome.storage.local.get('apiKey', (data) => {
+      if (data.apiKey) {
+        setApiKey(data.apiKey);
+        setIsKeySaved(true);
+      }
+    });
+  }, []);
 
   const handleSave = () => {
     // Check if api key is empty
@@ -23,10 +34,18 @@ export default function App() {
 
     // Save the API key to Chrome storage
     chrome.storage.local.set({ apiKey }, () => {
-      setSaved(true);
+      setIsKeySaved(true);
+      setShowSavedMessage(true);
       setTimeout(() => {
-        setSaved(false);
+        setShowSavedMessage(false);
       }, 2000);
+    });
+  };
+
+  const handleRemove = () => {
+    chrome.storage.local.remove('apiKey', () => {
+      setApiKey('');
+      setIsKeySaved(false);
     });
   };
 
@@ -41,7 +60,7 @@ export default function App() {
             Google AI Studio API Key
           </CardTitle>
           <CardDescription className="">
-            Enter your Gemini API key to enable below.
+            Enter your Gemini API key to enable LeetBuddy below.
           </CardDescription>
         </CardHeader>
         <CardContent className="">
@@ -56,8 +75,8 @@ export default function App() {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Type in your API key here..."
             />
-            <Button onClick={handleSave} disabled={saved}>
-              {saved ? (
+            <Button onClick={handleSave} disabled={showSavedMessage}>
+              {showSavedMessage ? (
                 <>
                   <CheckCircle className="" />
                   Saved
@@ -69,6 +88,11 @@ export default function App() {
                 </>
               )}
             </Button>
+            {isKeySaved && (
+              <Button variant="destructive" onClick={handleRemove}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

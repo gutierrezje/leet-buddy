@@ -50,3 +50,9 @@ npm run build
 - The CRXJS plugin automatically handles manifest generation
 - Content scripts should be placed in `src/content/`
 - Popup UI should be placed in `src/popup/`
+
+TODO
+- [] Create error screen for no api key
+- [x] prefill api key if already entered
+- [x] give option to clear api key from storage
+- 

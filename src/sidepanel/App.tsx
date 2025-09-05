@@ -9,6 +9,7 @@ import initialMessages from './data/messages.json'; // Assuming you have some ex
 import ChatMessage from './components/ChatMessage';
 
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
+import ApiKeyError from './components/ApiKeyError';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -106,7 +107,11 @@ export default function App() {
     fetchTitle();
 
     // add a listener for when the active tab is updated
-    const handleTabUpdate = (tabId, changeInfo, tab) => {
+    const handleTabUpdate = (
+      _: number, 
+      changeInfo: chrome.tabs.OnUpdatedInfo, 
+      tab: chrome.tabs.Tab
+    ) => {
       if (
         changeInfo.status === 'complete' &&
         changeInfo.url &&
@@ -187,13 +192,8 @@ export default function App() {
     return <div>Loading...</div>;
   }
 
-  if (!apiKey) {
-    return (
-      <div className="p-4">
-        <h2 className="font-bold">API Key Not Found</h2>
-        <p>Please set your API key in the extension configurations page.</p>
-      </div>
-    );
+  if (!apiKey || apiKey === '') {
+    return <ApiKeyError />;
   }
 
   return (
