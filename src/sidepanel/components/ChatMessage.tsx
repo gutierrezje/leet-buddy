@@ -11,7 +11,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
   return (
     <div
-      className={cn('flex gap-3 m-2', isUser ? 'justify-end' : 'justify-start')}
+      className={cn('flex mb-2', isUser ? 'justify-end' : 'justify-start')}
     >
       <div className={cn('max-w-xs md:max-w-sm', isUser ? 'order-first' : '')}>
         <Card
@@ -21,12 +21,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               : 'bg-accent text-accent-foreground'
           )}
         >
-          <CardContent className="p-4">
+          <CardContent className="px-4 text-sm leading-relaxed">
             {message.isLoading ? (
-              <div className="flex items-center justify-center space-x-1 p-1">
-                <div className="h-2 w-2 bg-current rounded-full animate-bounce [animation-delay:-300ms]" />
-                <div className="h-2 w-2 bg-current rounded-full animate-bounce [animation-delay:-150ms]" />
-                <div className="h-2 w-2 bg-current rounded-full animate-bounce" />
+              <div className="flex items-center justify-center space-x-1">
+                <div className="h-1 w-1 bg-current rounded-full animate-bounce [animation-delay:-300ms]" />
+                <div className="h-1 w-1 bg-current rounded-full animate-bounce [animation-delay:-150ms]" />
+                <div className="h-1 w-1 bg-current rounded-full animate-bounce" />
               </div>
             ) : (
               <p className="whitespace-pre-wrap">{message.text}</p>

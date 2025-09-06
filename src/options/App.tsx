@@ -50,7 +50,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 bg-background text-foreground">
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">LeetBuddy Configuration</h1>
       </div>

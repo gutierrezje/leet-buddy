@@ -192,17 +192,21 @@ export default function App() {
     return <div>Loading...</div>;
   }
 
+  const handleOpenOptions = () => {
+    chrome.runtime.openOptionsPage();
+  };
+
   if (!apiKey || apiKey === '') {
-    return <ApiKeyError />;
+    return <ApiKeyError onOpenOptions={handleOpenOptions} />;
   }
 
   return (
-    <div className="w-full h-screen flex flex-col">
+    <div className="w-full h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0">
+      <div className="p-4 border-b border-border flex-shrink-0">
         <div className="flex items-start justify-between flex-col">
-          <h1 className="text-lg font-semibold text-gray-800">LeetBuddy</h1>
-          <span className="text-sm text-gray-500">
+          <h1 className="text-lg font-semibold">LeetBuddy</h1>
+          <span className="text-sm text-muted-foreground">
             Current problem: {problemTitle}
           </span>
         </div>
@@ -216,7 +220,7 @@ export default function App() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 flex gap-2 flex-shrink-0 text-gray-600">
+      <div className="p-4 flex gap-2 border-border flex-shrink-0">
         <Input
           value={input}
           disabled={loading}
@@ -228,6 +232,7 @@ export default function App() {
               handleSendMessage(input);
             }
           }}
+          className="text-foreground placeholder:text-muted-foreground"
         />
 
         <Button

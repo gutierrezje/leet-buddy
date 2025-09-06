@@ -26,12 +26,12 @@ export default function App() {
   };
 
   return (
-    <div className="w-80 rounded-lg overflow-hidden bg-background">
-      <Card className="border-0 shadow-none">
+    <div className="w-80 bg-background">
+      <Card className="shadow-none">
         <CardHeader className="">
           <div>
-            <CardTitle className="text-white">LeetBuddy</CardTitle>
-            <CardDescription className="">
+            <CardTitle className="text-lg text-foreground">LeetBuddy</CardTitle>
+            <CardDescription className="text-md text-foreground-muted">
               AI Technical Interview Assistant
             </CardDescription>
           </div>
