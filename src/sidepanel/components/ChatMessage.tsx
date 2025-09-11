@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Message } from '../types';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
   message: Message;
@@ -28,8 +29,13 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 <div className="h-1 w-1 bg-current rounded-full animate-bounce [animation-delay:-150ms]" />
                 <div className="h-1 w-1 bg-current rounded-full animate-bounce" />
               </div>
-            ) : (
+            ) : 
+            isUser ? (
               <p className="whitespace-pre-wrap">{message.text}</p>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert prose-p:my-0 prose-ul:my-0 prose-li:my-0">
+                <ReactMarkdown>{message.text}</ReactMarkdown>
+              </div>
             )}
           </CardContent>
         </Card>

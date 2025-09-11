@@ -1,14 +1,6 @@
-# React + Vite + CRXJS
+# LeetBuddy
 
-This template helps you quickly start developing Chrome extensions with React, TypeScript and Vite. It includes the CRXJS Vite plugin for seamless Chrome extension development.
-
-## Features
-
-- React with TypeScript
-- TypeScript support
-- Vite build tool
-- CRXJS Vite plugin integration
-- Chrome extension manifest configuration
+An extension that allows you to have a convenient way to practice your technical interviews.
 
 ## Quick Start
 
@@ -55,6 +47,7 @@ TODO
 - [x] Create error screen for no api key
 - [x] prefill api key if already entered
 - [x] give option to clear api key from storage
+- [x] add logo
 - [] markdown rendering in messages
 - [] hint buttons for pattern & dsa
 - 
