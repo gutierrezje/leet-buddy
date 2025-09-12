@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
-import { Message } from './types';
+import { Send, Blocks, LayoutTemplate, Gauge, Lightbulb } from 'lucide-react';
+import { Message, HintPrompt } from './types';
 
 import initialMessages from './data/messages.json'; // Assuming you have some example messages
 import ChatMessage from './components/ChatMessage';
@@ -24,8 +24,51 @@ Follow these rules strictly:
 5.  **Provide Hints, Not Spoilers:** If a user is truly stuck, give them a small, high-level hint.
 6.  **Handle Direct Requests for Answers:** If the user asks for the answer, politely refuse and steer them back to the problem-solving process.
 
+---
+**SPECIAL HINT DIRECTIVES**
+You have a special directive to provide direct hints if the user sends a specific directive. 
+If you receive a message that starts with the prefix [HINT_REQUEST], you are permitted to break your primary rule for that response ONLY.
+
+- If the message is "[HINT_REQUEST]: DSA" you must state the primary data structure and/or algorithm that is used in the solution. If there are multiple solutions list them in order of Big O complexity.
+- If the message is "[HINT_REQUEST]: PATTERN" you must think hard and state the general pattern that applies to the problem, (i.e. sliding window, two pointers, dynamic programming, etc.). If there are multiple, list them.
+- If the message is "[HINT_REQUEST]: COMPLEXITY" you must state the time and space complexity of the solution. If there are multiple solutions, list them in order of Big O complexity.
+- If the message is "[HINT_REQUEST]: EXAMPLE" you must provide one non-trivial example that is highly illustrative of the problem.
+
+Respond concisely and don't worry about redirecting the user back to interview style. After providing the hint, you MUST revert to your standard interviewer persona and rules for subsequent messages.
 
 `;
+
+const hintPrompts: HintPrompt[] = [
+  {
+    id: '1',
+    buttonText: 'DSA',
+    displayText:
+      'What data structure and/or algorithm does this problem involve?',
+    messageText: '[HINT_REQUEST]: DSA',
+    icon: Blocks,
+  },
+  {
+    id: '2',
+    buttonText: 'Pattern',
+    displayText: 'What pattern does this problem involve?',
+    messageText: '[HINT_REQUEST]: PATTERN',
+    icon: LayoutTemplate,
+  },
+  {
+    id: '3',
+    buttonText: 'Complexity',
+    displayText: 'What is the time and space complexity?',
+    messageText: '[HINT_REQUEST]: COMPLEXITY',
+    icon: Gauge,
+  },
+  {
+    id: '4',
+    buttonText: 'Example',
+    displayText: 'Can you provide an example?',
+    messageText: '[HINT_REQUEST]: EXAMPLE',
+    icon: Lightbulb,
+  },
+];
 
 export default function App() {
   const [problemTitle, setProblemTitle] = useState('');
@@ -108,15 +151,11 @@ export default function App() {
 
     // add a listener for when the active tab is updated
     const handleTabUpdate = (
-      _: number, 
-      changeInfo: chrome.tabs.OnUpdatedInfo, 
+      _: number,
+      changeInfo: chrome.tabs.OnUpdatedInfo,
       tab: chrome.tabs.Tab
     ) => {
-      if (
-        changeInfo.status === 'complete' &&
-        changeInfo.url &&
-        tab.active
-      ) {
+      if (changeInfo.status === 'complete' && changeInfo.url && tab.active) {
         console.log('Tab URL changed, fetching new problem title...');
         fetchTitle();
         setMessages(initialMessages as Message[]);
@@ -124,13 +163,19 @@ export default function App() {
     };
 
     chrome.tabs.onUpdated.addListener(handleTabUpdate);
-    
+
     return () => {
       chrome.tabs.onUpdated.removeListener(handleTabUpdate);
     };
   }, []);
 
-  const handleSendMessage = async (messageText: string) => {
+  const handleSendMessage = async (
+    messageText: string,
+    displayText?: string
+  ) => {
+    // use the display text if provided
+    const userDisplayMessage = displayText || messageText;
+
     // prevent sending empty messages
     if (!messageText.trim() || loading || !chatSession) return;
 
@@ -138,7 +183,7 @@ export default function App() {
     const userMessage: Message = {
       id: Date.now().toString(),
       sender: 'user',
-      text: messageText,
+      text: userDisplayMessage,
       timestamp: Date.now(),
     };
 
@@ -213,11 +258,34 @@ export default function App() {
       </div>
 
       {/* Message List */}
-      <ScrollArea className="flex flex-1 p-4 overflow-hidden">
+      <ScrollArea className="flex flex-1 p-4 py-0 overflow-hidden">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
       </ScrollArea>
+
+      {/* Hint Prompts */}
+      <div className="p-4 border-t border-border">
+        <h2 className="text-lg font-semibold">Hints:</h2>
+        <div className="mt-2 grid grid-cols-2 gap-4">
+          {hintPrompts.map((hint) => {
+            const Icon = hint.icon;
+            return (
+              <Button
+                key={hint.id}
+                variant="outline"
+                disabled={loading}
+                onClick={() =>
+                  handleSendMessage(hint.messageText, hint.displayText)
+                }
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {hint.buttonText}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Input Area */}
       <div className="p-4 flex gap-2 border-border flex-shrink-0">

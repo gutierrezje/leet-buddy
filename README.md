@@ -44,10 +44,11 @@ npm run build
 - Popup UI should be placed in `src/popup/`
 
 TODO
+
 - [x] Create error screen for no api key
 - [x] prefill api key if already entered
 - [x] give option to clear api key from storage
 - [x] add logo
-- [] markdown rendering in messages
+- [x] markdown rendering in messages
 - [] hint buttons for pattern & dsa
-- 
+-

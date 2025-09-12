@@ -7,3 +7,11 @@ export interface Message {
   timestamp: number;
   isLoading?: boolean;
 }
+
+export interface HintPrompt {
+  id: string;
+  buttonText: string;
+  messageText: string;
+  displayText: string;
+  icon: React.ComponentType<{ className?: string }>;
+}

@@ -60,7 +60,7 @@ export default function App() {
             Google AI Studio API Key
           </CardTitle>
           <CardDescription className="">
-            Enter your Gemini API key to enable LeetBuddy below.
+            Enter your Gemini API key below to enable LeetBuddy.
           </CardDescription>
         </CardHeader>
         <CardContent className="">
