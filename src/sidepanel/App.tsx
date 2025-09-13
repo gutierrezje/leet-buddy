@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -118,54 +118,29 @@ export default function App() {
     setLoading(false);
   }, [apiKey, problemTitle]);
 
-  // Gets the current problem title from the content script
+  const lastSlugRef = useRef<string | null>(null);
+
   useEffect(() => {
-    // Find the current tab
-    const fetchTitle = () => {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const activeTab = tabs[0];
-        if (activeTab && activeTab.id) {
-          // Send a message to the content script in the active tab
-          chrome.tabs.sendMessage(
-            activeTab.id,
-            { type: 'GET_PROBLEM_TITLE' },
-            (response) => {
-              // Handle potential errors before setting state
-              if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError.message);
-                setProblemTitle('Error fetching problem title');
-                return;
-              }
-              if (response && response.title) {
-                setProblemTitle(response.title);
-              } else {
-                setProblemTitle('Error fetching problem title');
-              }
-            }
-          );
+    function handleMessage(
+      msg: {type?: string; title?: string; slug?: string}
+    ) {
+      if (msg.type === 'PROBLEM_METADATA' && msg.title && msg.slug) {
+        if (lastSlugRef.current !== msg.slug) {
+          console.log(`Detected new problem slug: ${lastSlugRef.current} -> ${msg.slug}`);
+        
+          lastSlugRef.current = msg.slug || '';
+          // Reset UI & reinitialize chat session
+          setProblemTitle(msg.title || '');
+          setMessages(initialMessages as Message[]);
+          setChatSession(null);
+          setLoading(true);
         }
-      });
-    };
-
-    fetchTitle();
-
-    // add a listener for when the active tab is updated
-    const handleTabUpdate = (
-      _: number,
-      changeInfo: chrome.tabs.OnUpdatedInfo,
-      tab: chrome.tabs.Tab
-    ) => {
-      if (changeInfo.status === 'complete' && changeInfo.url && tab.active) {
-        console.log('Tab URL changed, fetching new problem title...');
-        fetchTitle();
-        setMessages(initialMessages as Message[]);
       }
-    };
-
-    chrome.tabs.onUpdated.addListener(handleTabUpdate);
+    }
+    chrome.runtime.onMessage.addListener(handleMessage);
 
     return () => {
-      chrome.tabs.onUpdated.removeListener(handleTabUpdate);
+      chrome.runtime.onMessage.removeListener(handleMessage);
     };
   }, []);
 
@@ -234,7 +209,7 @@ export default function App() {
   };
 
   if (loading && messages.length <= 1) {
-    return <div>Loading...</div>;
+    return <div className='flex items-center justify-center h-full'>Loading...</div>;
   }
 
   const handleOpenOptions = () => {

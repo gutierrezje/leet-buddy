@@ -50,5 +50,5 @@ TODO
 - [x] give option to clear api key from storage
 - [x] add logo
 - [x] markdown rendering in messages
-- [] hint buttons for pattern & dsa
--
+- [x] hint buttons for pattern & dsa
+- [x] handle user navigating to new problem without reopening
