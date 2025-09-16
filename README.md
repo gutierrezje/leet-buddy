@@ -52,3 +52,4 @@ TODO
 - [x] markdown rendering in messages
 - [x] hint buttons for pattern & dsa
 - [x] handle user navigating to new problem without reopening
+- [ ] user problem solving history data

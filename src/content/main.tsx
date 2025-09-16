@@ -1,36 +1,60 @@
 console.log('[CRXJS] Hello world from content script!');
 
-function extractProblemData() {
-  const titleElement = document.querySelector('.text-title-large.text-text-primary a');
-
-  const title = titleElement?.textContent?.trim() || '';
-
-  const parts = location.pathname.split('/').filter(Boolean);
-  const slugIndex = parts.indexOf('problems');
-  const slug = slugIndex !== -1 
-    && parts.length > slugIndex + 1 
-    ? parts[slugIndex + 1] 
-    : '';
-
-  if (title && slug) {
-    chrome.runtime.sendMessage({
-      type: 'PROBLEM_METADATA',
-      title,
-      slug,
-    });
+function cleanTitleFromDocument(): string {
+  const element = document.querySelector('.text-title-large.text-text-primary a');
+  if (element?.textContent?.trim()) {
+    return element.textContent.trim();
   }
+  
+  let t = document.title || '';
+  if (t) {
+    t = t.replace(/\s+-\s+LeetCode\s*$/i, '').trim();
+  }
+  return t;
+}
+
+function getBaseSlug(path: string = location.pathname): string {
+  const parts = path.split('/').filter(Boolean);
+  const i = parts.indexOf('problems');
+  if (i === -1 || !parts[i + 1]) return '';
+
+  return parts[i + 1];
+}
+
+let lastSlug: string | null = null;
+
+function maybeSendProblemMetadata() {
+  const slug = getBaseSlug();
+  if (!slug) return;
+  if (slug === lastSlug) return;
+
+  const title = cleanTitleFromDocument();
+  if (!title) return;
+
+  lastSlug = slug;
+  chrome.runtime.sendMessage({
+    type: 'PROBLEM_METADATA',
+    title,
+    slug
+  });
+}
+
+function cycle() {
+  maybeSendProblemMetadata();
 }
 
 let debounceTimer: number | undefined;
-function scheduleExtract() {
-  window.clearTimeout(debounceTimer);
-  debounceTimer = window.setTimeout(extractProblemData, 500);
+function debouncedCycle() {
+  if (debounceTimer) {
+    window.clearTimeout(debounceTimer);
+  }
+  debounceTimer = window.setTimeout(cycle, 160);
 }
 
-extractProblemData();
+cycle();
 
 // Watch for DOM changes
-const observer = new MutationObserver(scheduleExtract);
+const observer = new MutationObserver(debouncedCycle);
 observer.observe(document.body, {
   childList: true,
   subtree: true,
@@ -42,13 +66,7 @@ observer.observe(document.body, {
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   // Check if the message is a request for the problem title
   if (request.type === 'GET_PROBLEM_TITLE') {
-    const titleElement = document.querySelector(
-      '.text-title-large.text-text-primary a'
-    );
-    console.log('Title element:', titleElement);
-    const title = titleElement
-      ? (titleElement as HTMLElement).innerText
-      : 'No title found';
+    const title = cleanTitleFromDocument();
     sendResponse({ title: title });
   }
   return true; // Keep the message channel open for sendResponse
