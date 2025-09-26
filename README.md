@@ -53,3 +53,10 @@ TODO
 - [x] hint buttons for pattern & dsa
 - [x] handle user navigating to new problem without reopening
 - [ ] user problem solving history data
+    - Use graphql to query for problem tags
+    - compact/map problem categories together
+    - implement some timing functionality
+    - Review page to display user stats
+- [ ] UI timer/stopwatch
+- [ ] support for other LLM models
+- [ ] handle gating on premium problems if necessary

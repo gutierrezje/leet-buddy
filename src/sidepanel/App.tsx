@@ -120,20 +120,55 @@ export default function App() {
 
   const lastSlugRef = useRef<string | null>(null);
 
+  // Bootstrap from storage on mount
+  useEffect(() => {
+    chrome.storage.local.get(['currentProblem'], (data) => {
+      const cp = data.currentProblem;
+      if (cp?.slug && cp?.title) {
+        if (lastSlugRef.current !== cp.slug) {
+          console.log(`Bootstrapped problem slug from storage: ${cp.slug}`);
+          const { title, slug } = data.currentProblem;
+          setProblemTitle(title);
+          lastSlugRef.current = slug;
+          setLoading(true);
+        }
+      } else {
+        setLoading(true);
+      }
+    });
+  }, []);
+
+  // Subscribe to storage changes (if somehow miss timing on open)
+  useEffect(() => {
+    function onChanged(changes: Record<string, chrome.storage.StorageChange>, area: string) {
+      if (area !== 'local' || !changes.currentProblem) return;
+      const cp = changes.currentProblem.newValue;
+      if (cp?.slug && cp?.title && lastSlugRef.current !== cp.slug) {
+        console.log(`Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`);
+        console.log(`Problem title: ${cp.title}`);
+        lastSlugRef.current = cp.slug;
+        setProblemTitle(cp.title);
+        setLoading(true);
+      }
+    }
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, []);
+
+  // Subscribe to messages from content script (when panel is already open)
   useEffect(() => {
     function handleMessage(
       msg: {type?: string; title?: string; slug?: string}
     ) {
-      if (msg.type === 'PROBLEM_METADATA' && msg.title && msg.slug) {
+      if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
         if (lastSlugRef.current !== msg.slug) {
-          console.log(`Detected new problem slug: ${lastSlugRef.current} -> ${msg.slug}`);
-        
-          lastSlugRef.current = msg.slug || '';
-          // Reset UI & reinitialize chat session
+          lastSlugRef.current = msg.slug;
           setProblemTitle(msg.title || '');
           setMessages(initialMessages as Message[]);
-          setChatSession(null);
-          setLoading(true);
+          setChatSession(null); // triggers re-init
+        } else if (msg.title && msg.title !== problemTitle) {
+          // Title refinement (rare fallback path)
+          setProblemTitle(msg.title);
         }
       }
     }
@@ -209,7 +244,7 @@ export default function App() {
   };
 
   if (loading && messages.length <= 1) {
-    return <div className='flex items-center justify-center h-full'>Loading...</div>;
+    return <div className='flex items-center justify-center h-full m-4'>Loading...</div>;
   }
 
   const handleOpenOptions = () => {
