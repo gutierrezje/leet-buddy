@@ -14,7 +14,7 @@ function domTitle(): string {
 function parseSlug(path: string = location.pathname): string {
   const parts = path.split('/').filter(Boolean);
   const i = parts.indexOf('problems');
-  return (i !== -1 && parts[i + 1]) ? parts[i + 1] : '';
+  return i !== -1 && parts[i + 1] ? parts[i + 1] : '';
 }
 
 function getCSRFToken(): string {
@@ -39,10 +39,16 @@ function persistCurrentProblem(payload: {
   isPaidOnly: boolean;
   tags: string[];
 }) {
-  chrome.storage.local.set({ currentProblem: payload }, () => void chrome.runtime.lastError);
+  chrome.storage.local.set(
+    { currentProblem: payload },
+    () => void chrome.runtime.lastError
+  );
 }
 
-async function fetchMeta(slug: string, signal: AbortSignal): Promise<ProblemMeta | null> {
+async function fetchMeta(
+  slug: string,
+  signal: AbortSignal
+): Promise<ProblemMeta | null> {
   const query = `
     query q($titleSlug: String!) {
       question(titleSlug: $titleSlug) {
@@ -61,7 +67,7 @@ async function fetchMeta(slug: string, signal: AbortSignal): Promise<ProblemMeta
         'x-csrftoken': getCSRFToken(),
       },
       body: JSON.stringify({ query, variables: { titleSlug: slug } }),
-      signal
+      signal,
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -71,7 +77,7 @@ async function fetchMeta(slug: string, signal: AbortSignal): Promise<ProblemMeta
       title: q.title,
       difficulty: q.difficulty,
       isPaidOnly: q.isPaidOnly,
-      tags: q.topicTags.map((t: any) => t.name)
+      tags: q.topicTags.map((t: any) => t.name),
     };
   } catch (e) {
     if ((e as any).name !== 'AbortError') {
@@ -108,7 +114,7 @@ async function handleSlugChange() {
     title: domTitle() || slug,
     difficulty: '',
     isPaidOnly: false,
-    tags: []
+    tags: [],
   };
 
   cache[slug] = finalMeta;
@@ -128,11 +134,16 @@ function debounced() {
 }
 
 cycle();
-new MutationObserver(debounced).observe(document.body, { childList: true, subtree: true });
+new MutationObserver(debounced).observe(document.body, {
+  childList: true,
+  subtree: true,
+});
 
 chrome.runtime.onMessage.addListener((req, _s, send) => {
   if (req.type === 'GET_CURRENT_PROBLEM') {
-    chrome.storage.local.get(['currentProblem'], d => send(d.currentProblem || null));
+    chrome.storage.local.get(['currentProblem'], (d) =>
+      send(d.currentProblem || null)
+    );
     return true;
   }
 });

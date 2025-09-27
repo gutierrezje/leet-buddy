@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Send, Blocks, LayoutTemplate, Gauge, Lightbulb } from 'lucide-react';
+import { Blocks, LayoutTemplate, Gauge, Lightbulb, MessageSquareCode } from 'lucide-react';
 import { Message, HintPrompt } from './types';
 
-import initialMessages from './data/messages.json'; // Assuming you have some example messages
-import ChatMessage from './components/ChatMessage';
+import initialMessages from './data/messages.json';
 
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 import ApiKeyError from './components/ApiKeyError';
+import { TabNavigation } from './components/TabNavigation';
+import ChatPane from './components/ChatPane';
+import ReviewPane from './components/ReviewPane';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -77,6 +76,7 @@ export default function App() {
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
 
   // Set the initial messages
   useEffect(() => {
@@ -140,11 +140,16 @@ export default function App() {
 
   // Subscribe to storage changes (if somehow miss timing on open)
   useEffect(() => {
-    function onChanged(changes: Record<string, chrome.storage.StorageChange>, area: string) {
+    function onChanged(
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string
+    ) {
       if (area !== 'local' || !changes.currentProblem) return;
       const cp = changes.currentProblem.newValue;
       if (cp?.slug && cp?.title && lastSlugRef.current !== cp.slug) {
-        console.log(`Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`);
+        console.log(
+          `Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`
+        );
         console.log(`Problem title: ${cp.title}`);
         lastSlugRef.current = cp.slug;
         setProblemTitle(cp.title);
@@ -157,9 +162,11 @@ export default function App() {
 
   // Subscribe to messages from content script (when panel is already open)
   useEffect(() => {
-    function handleMessage(
-      msg: {type?: string; title?: string; slug?: string}
-    ) {
+    function handleMessage(msg: {
+      type?: string;
+      title?: string;
+      slug?: string;
+    }) {
       if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
         if (lastSlugRef.current !== msg.slug) {
           lastSlugRef.current = msg.slug;
@@ -244,7 +251,11 @@ export default function App() {
   };
 
   if (loading && messages.length <= 1) {
-    return <div className='flex items-center justify-center h-full m-4'>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-full m-4">
+        Loading...
+      </div>
+    );
   }
 
   const handleOpenOptions = () => {
@@ -259,68 +270,31 @@ export default function App() {
     <div className="w-full h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <div className="p-4 border-b border-border flex-shrink-0">
-        <div className="flex items-start justify-between flex-col">
-          <h1 className="text-lg font-semibold">LeetBuddy</h1>
-          <span className="text-sm text-muted-foreground">
-            Current problem: {problemTitle}
-          </span>
+        <div className="flex items-center">
+          <MessageSquareCode className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0" />
+          <div className="flex items-start justify-between flex-col">
+            <h1 className="text-lg font-semibold">LeetBuddy</h1>
+            <span className="text-xs text-muted-foreground">
+              {problemTitle}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Message List */}
-      <ScrollArea className="flex flex-1 p-4 py-0 overflow-hidden">
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-      </ScrollArea>
+      <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
 
-      {/* Hint Prompts */}
-      <div className="p-4 border-t border-border">
-        <h2 className="text-lg font-semibold">Hints:</h2>
-        <div className="mt-2 grid grid-cols-2 gap-4">
-          {hintPrompts.map((hint) => {
-            const Icon = hint.icon;
-            return (
-              <Button
-                key={hint.id}
-                variant="outline"
-                disabled={loading}
-                onClick={() =>
-                  handleSendMessage(hint.messageText, hint.displayText)
-                }
-              >
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                {hint.buttonText}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 flex gap-2 border-border flex-shrink-0">
-        <Input
-          value={input}
-          disabled={loading}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage(input);
-            }
-          }}
-          className="text-foreground placeholder:text-muted-foreground"
+      {activeTab === 'chat' ? (
+        <ChatPane
+          messages={messages}
+          input={input}
+          loading={loading}
+          hintPrompts={hintPrompts}
+          onChangeInput={setInput}
+          onSend={handleSendMessage}
         />
-
-        <Button
-          size="icon"
-          onClick={() => handleSendMessage(input)}
-          disabled={!input.trim() || loading}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      ) : (
+        <ReviewPane />
+      )}
     </div>
   );
 }
