@@ -1,3 +1,5 @@
+import { SubmissionStatus } from "@/shared/submissions"; 
+
 console.log('[LeetBuddy] Content script loaded');
 
 interface ProblemMeta {
@@ -7,8 +9,55 @@ interface ProblemMeta {
   tags: string[];
 }
 
+interface PathInfo {
+  problemSlug: string;
+  submissionId?: string;
+}
+
 function domTitle(): string {
   return (document.title || '').replace(/\s+-\s+LeetCode\s*$/i, '').trim();
+}
+
+function parsePath(path: string = location.pathname): PathInfo { 
+  // /problems/<slug>
+  const slugMatch = path.match(/\/problems\/([^/]+)/);
+  const problemSlug = slugMatch?.[1] ?? '';
+
+  // /submissions/<id>
+  const subMatch = path.match(/\/submissions\/(\d+)/);
+  const submissionId = subMatch?.[1];
+
+  return { problemSlug, submissionId };
+}
+
+function readSubmissionStatus(): SubmissionStatus | null {
+  const span = document.querySelector('span[data-e2e-locator="submission-result"]');
+  const text = span?.textContent?.trim().toLowerCase();
+  if (!text) return null;
+  if (text.includes('accepted')) return 'Accepted';
+  return 'Failed';
+}
+
+const emittedSubmissionKeys = new Set<string>();
+
+function detectSubmissionResult() {
+  const { problemSlug, submissionId } = parsePath();
+  if (!problemSlug || !submissionId) return;
+
+  const status = readSubmissionStatus();
+  if (!status) return;
+
+  const key = `${problemSlug}#${submissionId}`;
+  if (emittedSubmissionKeys.has(key)) return;
+  emittedSubmissionKeys.add(key);
+
+  safeSend({
+    type: "PROBLEM_SUBMISSION_RESULT",
+    slug: problemSlug,
+    submissionId,
+    status,
+    at: Date.now(),
+  });
 }
 
 function parseSlug(path: string = location.pathname): string {
@@ -125,6 +174,7 @@ async function handleSlugChange() {
 
 function cycle() {
   handleSlugChange();
+  detectSubmissionResult();
 }
 
 let debounceTimer: number | undefined;
