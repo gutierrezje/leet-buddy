@@ -1,4 +1,4 @@
-import { SubmissionStatus } from "@/shared/submissions"; 
+import { SubmissionStatus } from '@/shared/submissions';
 
 console.log('[LeetBuddy] Content script loaded');
 
@@ -18,7 +18,7 @@ function domTitle(): string {
   return (document.title || '').replace(/\s+-\s+LeetCode\s*$/i, '').trim();
 }
 
-function parsePath(path: string = location.pathname): PathInfo { 
+function parsePath(path: string = location.pathname): PathInfo {
   // /problems/<slug>
   const slugMatch = path.match(/\/problems\/([^/]+)/);
   const problemSlug = slugMatch?.[1] ?? '';
@@ -31,7 +31,9 @@ function parsePath(path: string = location.pathname): PathInfo {
 }
 
 function readSubmissionStatus(): SubmissionStatus | null {
-  const span = document.querySelector('span[data-e2e-locator="submission-result"]');
+  const span = document.querySelector(
+    'span[data-e2e-locator="submission-result"]'
+  );
   const text = span?.textContent?.trim().toLowerCase();
   if (!text) return null;
   if (text.includes('accepted')) return 'Accepted';
@@ -52,7 +54,7 @@ function detectSubmissionResult() {
   emittedSubmissionKeys.add(key);
 
   safeSend({
-    type: "PROBLEM_SUBMISSION_RESULT",
+    type: 'PROBLEM_SUBMISSION_RESULT',
     slug: problemSlug,
     submissionId,
     status,

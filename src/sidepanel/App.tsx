@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { Blocks, LayoutTemplate, Gauge, Lightbulb, MessageSquareCode } from 'lucide-react';
-import { Message, HintPrompt } from './types';
+import {
+  Blocks,
+  LayoutTemplate,
+  Gauge,
+  Lightbulb,
+  MessageSquareCode,
+} from 'lucide-react';
+import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-
-import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
-import ApiKeyError from './components/ApiKeyError';
+import { Message, HintPrompt } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
+import ApiKeyError from './components/ApiKeyError';
+import Stopwatch from './components/StopWatch';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -77,6 +83,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [stoppedSec, setStoppedSec] = useState(0);
+  const [currentProblem, setCurrentProblem] = useState<{ slug: string; title: string; difficulty?: string; tags?: string[] } | null>(null);
 
   // Set the initial messages
   useEffect(() => {
@@ -269,8 +278,8 @@ export default function App() {
   return (
     <div className="w-full h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
-      <div className="p-4 border-b border-border flex-shrink-0">
-        <div className="flex items-center">
+      <div className="flex flex-shrink-0 items-center p-4 border-b border-border ">
+        <div className="flex flex-grow items-center">
           <MessageSquareCode className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0" />
           <div className="flex items-start justify-between flex-col">
             <h1 className="text-lg font-semibold">LeetBuddy</h1>
@@ -279,6 +288,7 @@ export default function App() {
             </span>
           </div>
         </div>
+        <Stopwatch />
       </div>
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
