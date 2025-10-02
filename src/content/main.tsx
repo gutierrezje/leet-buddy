@@ -1,18 +1,6 @@
-import { SubmissionStatus } from '@/shared/submissions';
+import { SubmissionStatus, PathInfo, ProblemMeta } from '@/shared/submitting';
 
 console.log('[LeetBuddy] Content script loaded');
-
-interface ProblemMeta {
-  title: string;
-  difficulty: string;
-  isPaidOnly: boolean;
-  tags: string[];
-}
-
-interface PathInfo {
-  problemSlug: string;
-  submissionId?: string;
-}
 
 function domTitle(): string {
   return (document.title || '').replace(/\s+-\s+LeetCode\s*$/i, '').trim();

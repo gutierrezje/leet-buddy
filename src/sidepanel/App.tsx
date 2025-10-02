@@ -9,12 +9,13 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import { Message, HintPrompt } from '@/shared/types';
+import { Message, HintPrompt, ProblemMeta } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
 import ApiKeyError from './components/ApiKeyError';
-import Stopwatch from './components/StopWatch';
+import Stopwatch from './components/Stopwatch';
+import SaveModal from './components/SaveModal';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -85,12 +86,20 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
   const [saveOpen, setSaveOpen] = useState(false);
   const [stoppedSec, setStoppedSec] = useState(0);
-  const [currentProblem, setCurrentProblem] = useState<{ slug: string; title: string; difficulty?: string; tags?: string[] } | null>(null);
+  const [currentProblem, setCurrentProblem] = useState<ProblemMeta | null>(null);
 
-  // Set the initial messages
-  useEffect(() => {
-    setMessages(initialMessages as Message[]);
-  }, []);
+  function handleStopwatchStop(elapsed: number) {
+    setStoppedSec(elapsed);
+    setSaveOpen(true);
+  }
+
+  function handleCancelSave() {
+    setSaveOpen(false);
+  }
+
+  function handleConfirmSave() {
+    setSaveOpen(false);
+  }
 
   // Gets the API key from storage
   useEffect(() => {
@@ -288,7 +297,7 @@ export default function App() {
             </span>
           </div>
         </div>
-        <Stopwatch />
+        <Stopwatch onStop={handleStopwatchStop} />
       </div>
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
@@ -305,6 +314,12 @@ export default function App() {
       ) : (
         <ReviewPane />
       )}
+
+      <SaveModal 
+        open={saveOpen} 
+        onConfirm={handleConfirmSave} 
+        onCancel={handleCancelSave} 
+      />
     </div>
   );
 }

@@ -1,16 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { Pause, Play, RefreshCcw, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { formatHMS } from '@/shared/utils/time';
 
-function formatHMS(seconds: number) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  }
+type StopwatchProps = {
+  onStop?: (elapsed: number) => void;
+}
 
-export default function Stopwatch() {
+export default function Stopwatch({ onStop }: StopwatchProps) {
   // Stopwatch implementation
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -31,7 +28,15 @@ export default function Stopwatch() {
     }
   }, [isRunning]);
 
-  const reset = () => {
+  const handleStart = () => {
+    setIsRunning(true);
+  }
+
+  const handlePause = () => {
+    setIsRunning(false);
+  }
+
+  const handleReset = () => {
     setElapsedTime(0);
     setIsRunning(false);
     if (intervalRef.current) {
@@ -40,8 +45,9 @@ export default function Stopwatch() {
     }
   }
 
-  const stop = () => {
-    reset();
+  const handleStop = () => {
+    handleReset();
+    onStop?.(elapsedTime);
   }
 
   return (
@@ -51,14 +57,14 @@ export default function Stopwatch() {
           <Button
             size="icon"
             className="h-6 w-6 hover:border-1 hover:border-accent"
-            onClick={() => setIsRunning(false)}
+            onClick={handlePause}
           >
             <Pause />
           </Button>
           <Button
             size="icon"
             className="h-6 w-6 hover:border-1 hover:border-accent"
-            onClick={() => stop()}
+            onClick={handleStop}
           >
             <Square />
           </Button>
@@ -68,14 +74,14 @@ export default function Stopwatch() {
           <Button
             size="icon"
             className="h-6 w-6 hover:border-1 hover:border-accent"
-            onClick={() => setIsRunning(true)}
+            onClick={handleStart}
           >
             <Play />
           </Button>
           <Button
             size="icon"
             className="h-6 w-6 hover:border-1 hover:border-accent"
-            onClick={() => reset()}
+            onClick={handleReset}
           >
             <RefreshCcw />
           </Button>
