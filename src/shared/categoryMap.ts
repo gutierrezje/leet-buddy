@@ -146,7 +146,7 @@ const TAG_TO_COMPACT: Record<string, CompactCategory[]> = {
 };
 
 /**
- * Maps a set of LeetCode tag names to compact categories (deduplicated).
+ * Maps LeetCode tag names to compact categories set.
  * Unknown tags fall into 'Other'.
  */
 export function mapTagsToCompact(tagNames: string[]): CompactCategory[] {
@@ -163,7 +163,7 @@ export function mapTagsToCompact(tagNames: string[]): CompactCategory[] {
 }
 
 /**
- * Optional: summarize counts by compact category.
+ * Summarize counts by compact category.
  */
 export function aggregateCategoryCounts(
   tagLists: string[][]

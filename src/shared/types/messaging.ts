@@ -22,7 +22,7 @@ export interface HintPrompt {
 export type ProblemMetadataMessage = {
   type: 'PROBLEM_METADATA';
   slug: string;
-  } & ProblemMeta;
+} & ProblemMeta;
 
 export type SubmissionResultMessage = {
   type: 'PROBLEM_SUBMISSION_RESULT';
@@ -40,7 +40,9 @@ export type ProblemAcceptedMessage = {
 };
 
 export type GetCurrentProblemRequest = { type: 'GET_CURRENT_PROBLEM' };
-export type GetCurrentProblemResponse = (ProblemMetadataMessage & { type?: never }) | null;
+export type GetCurrentProblemResponse =
+  | (ProblemMetadataMessage & { type?: never })
+  | null;
 
 export type RuntimeMessage =
   | ProblemMetadataMessage

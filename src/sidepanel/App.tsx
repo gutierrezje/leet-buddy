@@ -9,13 +9,14 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import { Message, HintPrompt, ProblemMeta } from '@/shared/types';
+import { Message, HintPrompt, CurrentProblem } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
 import ApiKeyError from './components/ApiKeyError';
 import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
+import { mapTagsToCompact } from '@/shared/categoryMap';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -86,7 +87,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
   const [saveOpen, setSaveOpen] = useState(false);
   const [stoppedSec, setStoppedSec] = useState(0);
-  const [currentProblem, setCurrentProblem] = useState<ProblemMeta | null>(null);
+  const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(
+    null
+  );
 
   function handleStopwatchStop(elapsed: number) {
     setStoppedSec(elapsed);
@@ -143,10 +146,18 @@ export default function App() {
     chrome.storage.local.get(['currentProblem'], (data) => {
       const cp = data.currentProblem;
       if (cp?.slug && cp?.title) {
+        const compact = mapTagsToCompact(cp.tags || []);
+        console.log(`[LeetBuddy]: bootstrapped compact categories: ${compact}`);
         if (lastSlugRef.current !== cp.slug) {
           console.log(`Bootstrapped problem slug from storage: ${cp.slug}`);
           const { title, slug } = data.currentProblem;
           setProblemTitle(title);
+          setCurrentProblem({
+            slug,
+            title,
+            difficulty: cp.difficulty || '',
+            tags: compact,
+          });
           lastSlugRef.current = slug;
           setLoading(true);
         }
@@ -184,13 +195,23 @@ export default function App() {
       type?: string;
       title?: string;
       slug?: string;
+      difficulty?: string;
+      tags?: string[];
     }) {
       if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
+        const compact = mapTagsToCompact(msg.tags || []);
+        console.log(`[LeetBuddy]: compact categories: ${compact}`);
         if (lastSlugRef.current !== msg.slug) {
           lastSlugRef.current = msg.slug;
           setProblemTitle(msg.title || '');
           setMessages(initialMessages as Message[]);
           setChatSession(null); // triggers re-init
+          setCurrentProblem({
+            slug: msg.slug,
+            title: msg.title || '',
+            difficulty: msg.difficulty || '',
+            tags: compact,
+          });
         } else if (msg.title && msg.title !== problemTitle) {
           // Title refinement (rare fallback path)
           setProblemTitle(msg.title);
@@ -315,10 +336,10 @@ export default function App() {
         <ReviewPane />
       )}
 
-      <SaveModal 
-        open={saveOpen} 
-        onConfirm={handleConfirmSave} 
-        onCancel={handleCancelSave} 
+      <SaveModal
+        open={saveOpen}
+        onConfirm={handleConfirmSave}
+        onCancel={handleCancelSave}
       />
     </div>
   );

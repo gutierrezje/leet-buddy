@@ -1,4 +1,4 @@
-import { ProblemMeta } from "./problems";
+import { ProblemMeta } from './problems';
 
 export type SubmissionStatus = 'Accepted' | 'Failed' | 'Manual';
 

@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Pause, Play, RefreshCcw, Square } from 'lucide-react';
+import { CheckCircle, Pause, Play, RefreshCcw, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatHMS } from '@/shared/utils/time';
 
 type StopwatchProps = {
   onStop?: (elapsed: number) => void;
-}
+};
 
 export default function Stopwatch({ onStop }: StopwatchProps) {
   // Stopwatch implementation
@@ -17,7 +17,7 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
     if (!isRunning) return;
 
     intervalRef.current = window.setInterval(() => {
-      setElapsedTime(s => s + 1);
+      setElapsedTime((s) => s + 1);
     }, 1000);
 
     return () => {
@@ -25,16 +25,16 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-    }
+    };
   }, [isRunning]);
 
   const handleStart = () => {
     setIsRunning(true);
-  }
+  };
 
   const handlePause = () => {
     setIsRunning(false);
-  }
+  };
 
   const handleReset = () => {
     setElapsedTime(0);
@@ -43,12 +43,12 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  }
+  };
 
   const handleStop = () => {
     handleReset();
     onStop?.(elapsedTime);
-  }
+  };
 
   return (
     <div className="flex items-center rounded-md border bg-primary px-2 py-1 gap-2">
@@ -66,7 +66,7 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
             className="h-6 w-6 hover:border-1 hover:border-accent"
             onClick={handleStop}
           >
-            <Square />
+            <CheckCircle />
           </Button>
         </>
       ) : (
@@ -88,7 +88,9 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
         </>
       )}
 
-      <span className="text-sm font-mono text-background">{formatHMS(elapsedTime)}</span>
+      <span className="text-sm font-mono text-background">
+        {formatHMS(elapsedTime)}
+      </span>
     </div>
   );
 }
