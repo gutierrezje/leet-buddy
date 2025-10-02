@@ -5,14 +5,16 @@ import { formatHMS } from '@/shared/utils/time';
 
 type StopwatchProps = {
   onStop?: (elapsed: number) => void;
+  resetTrigger?: number;
 };
 
-export default function Stopwatch({ onStop }: StopwatchProps) {
+export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
   // Stopwatch implementation
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const intervalRef = useRef<number | null>(null);
 
+  // setup an interval to increment elapsed time every second when running
   useEffect(() => {
     if (!isRunning) return;
 
@@ -28,13 +30,18 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
     };
   }, [isRunning]);
 
-  const handleStart = () => {
-    setIsRunning(true);
-  };
-
-  const handlePause = () => {
+  // reset when resetTrigger changes
+  useEffect(() => {
     setIsRunning(false);
-  };
+    setElapsedTime(0);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, [resetTrigger]);
+
+  const handleStart = () => setIsRunning(true);
+  const handlePause = () => setIsRunning(false);
 
   const handleReset = () => {
     setElapsedTime(0);
@@ -46,7 +53,7 @@ export default function Stopwatch({ onStop }: StopwatchProps) {
   };
 
   const handleStop = () => {
-    handleReset();
+    setIsRunning(false);
     onStop?.(elapsedTime);
   };
 

@@ -54,7 +54,7 @@ TODO
 - [x] handle user navigating to new problem without reopening
 - [ ] user problem solving history data
   - [x] Use graphql to query for problem tags
-  - [] compact/map problem categories together
+  - [x] compact/map problem categories together
   - [] implement some timing functionality
   - [] Review page to display user stats
 - [ ] support for other LLM models
@@ -65,7 +65,6 @@ Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
 
-- map lc problem tags to compacted tags once received
 - submit button should only reset timer if submitted in modal, keep time if canceled
 - populate save modal with problem metadata, time
 - hook up save button to storage

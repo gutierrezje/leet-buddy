@@ -78,7 +78,6 @@ const hintPrompts: HintPrompt[] = [
 ];
 
 export default function App() {
-  const [problemTitle, setProblemTitle] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [apiKey, setApiKey] = useState('');
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
@@ -90,6 +89,7 @@ export default function App() {
   const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(
     null
   );
+  const [resetTick, setResetTick] = useState(0);
 
   function handleStopwatchStop(elapsed: number) {
     setStoppedSec(elapsed);
@@ -102,6 +102,7 @@ export default function App() {
 
   function handleConfirmSave() {
     setSaveOpen(false);
+    setResetTick((t) => t + 1);
   }
 
   // Gets the API key from storage
@@ -118,14 +119,14 @@ export default function App() {
 
   // Initialize the AI chat session once the key is available
   useEffect(() => {
-    if (!apiKey || !problemTitle || problemTitle === '') return;
-
-    console.log(`Initializing new chat session for problem: ${problemTitle}`);
+    if (!apiKey || !currentProblem?.title) return;
+    const title = currentProblem.title;
+    console.log(`Initializing new chat session for problem: ${title}`);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const dynamicSystemPrompt = `${systemPrompt}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.`;
+    const dynamicSystemPrompt = `${systemPrompt}\n\nThe user is currently working on the following problem: "${title}". Tailor your guidance to this specific problem.`;
 
     const chatSession = model.startChat({
       systemInstruction: {
@@ -137,7 +138,7 @@ export default function App() {
     setChatSession(chatSession);
     setMessages(initialMessages as Message[]);
     setLoading(false);
-  }, [apiKey, problemTitle]);
+  }, [apiKey, currentProblem?.title]);
 
   const lastSlugRef = useRef<string | null>(null);
 
@@ -150,15 +151,13 @@ export default function App() {
         console.log(`[LeetBuddy]: bootstrapped compact categories: ${compact}`);
         if (lastSlugRef.current !== cp.slug) {
           console.log(`Bootstrapped problem slug from storage: ${cp.slug}`);
-          const { title, slug } = data.currentProblem;
-          setProblemTitle(title);
           setCurrentProblem({
-            slug,
-            title,
+            slug: cp.slug,
+            title: cp.title,
             difficulty: cp.difficulty || '',
             tags: compact,
           });
-          lastSlugRef.current = slug;
+          lastSlugRef.current = cp.slug;
           setLoading(true);
         }
       } else {
@@ -181,7 +180,13 @@ export default function App() {
         );
         console.log(`Problem title: ${cp.title}`);
         lastSlugRef.current = cp.slug;
-        setProblemTitle(cp.title);
+        const compact = mapTagsToCompact(cp.tags || []);
+        setCurrentProblem({
+          slug: cp.slug,
+          title: cp.title,
+          difficulty: cp.difficulty || '',
+          tags: compact,
+        });
         setLoading(true);
       }
     }
@@ -203,7 +208,6 @@ export default function App() {
         console.log(`[LeetBuddy]: compact categories: ${compact}`);
         if (lastSlugRef.current !== msg.slug) {
           lastSlugRef.current = msg.slug;
-          setProblemTitle(msg.title || '');
           setMessages(initialMessages as Message[]);
           setChatSession(null); // triggers re-init
           setCurrentProblem({
@@ -212,9 +216,20 @@ export default function App() {
             difficulty: msg.difficulty || '',
             tags: compact,
           });
-        } else if (msg.title && msg.title !== problemTitle) {
-          // Title refinement (rare fallback path)
-          setProblemTitle(msg.title);
+        } else {
+          // if same slug, update in case stale
+          setCurrentProblem(prev => {
+            if (prev) {
+              return {
+                ...prev,
+                title: msg.title || prev.title,
+                difficulty: msg.difficulty || prev.difficulty,
+                tags: compact.length > 0 ? compact : prev.tags,
+              };
+            } else {
+              return prev;
+            }
+          });
         }
       }
     }
@@ -314,11 +329,11 @@ export default function App() {
           <div className="flex items-start justify-between flex-col">
             <h1 className="text-lg font-semibold">LeetBuddy</h1>
             <span className="text-xs text-muted-foreground">
-              {problemTitle}
+              {currentProblem?.title || 'No problem detected'}
             </span>
           </div>
         </div>
-        <Stopwatch onStop={handleStopwatchStop} />
+        <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
       </div>
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
