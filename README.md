@@ -65,6 +65,5 @@ Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
 
-- submit button should only reset timer if submitted in modal, keep time if canceled
 - populate save modal with problem metadata, time
 - hook up save button to storage

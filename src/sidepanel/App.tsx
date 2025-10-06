@@ -148,7 +148,6 @@ export default function App() {
       const cp = data.currentProblem;
       if (cp?.slug && cp?.title) {
         const compact = mapTagsToCompact(cp.tags || []);
-        console.log(`[LeetBuddy]: bootstrapped compact categories: ${compact}`);
         if (lastSlugRef.current !== cp.slug) {
           console.log(`Bootstrapped problem slug from storage: ${cp.slug}`);
           setCurrentProblem({
@@ -355,6 +354,8 @@ export default function App() {
         open={saveOpen}
         onConfirm={handleConfirmSave}
         onCancel={handleCancelSave}
+        problem={currentProblem!}
+        elapsedSec={stoppedSec}
       />
     </div>
   );

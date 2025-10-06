@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Pause, Play, RefreshCcw, Square } from 'lucide-react';
+import { CheckCircle, Pause, Play, RefreshCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatHMS } from '@/shared/utils/time';
 
@@ -7,6 +7,9 @@ type StopwatchProps = {
   onStop?: (elapsed: number) => void;
   resetTrigger?: number;
 };
+
+const swButtonStyle = `h-6 w-6 bg-accent text-accent-foreground
+hover:border-1 hover:border-primary hover:bg-accent hover:text-accent-foreground`;
 
 export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
   // Stopwatch implementation
@@ -58,19 +61,19 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
   };
 
   return (
-    <div className="flex items-center rounded-md border bg-primary px-2 py-1 gap-2">
+    <div className="flex items-center rounded-md border bg-accent px-2 py-1 gap-2">
       {isRunning ? (
         <>
           <Button
             size="icon"
-            className="h-6 w-6 hover:border-1 hover:border-accent"
+            className={swButtonStyle}
             onClick={handlePause}
           >
             <Pause />
           </Button>
           <Button
             size="icon"
-            className="h-6 w-6 hover:border-1 hover:border-accent"
+            className={swButtonStyle}
             onClick={handleStop}
           >
             <CheckCircle />
@@ -80,14 +83,14 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
         <>
           <Button
             size="icon"
-            className="h-6 w-6 hover:border-1 hover:border-accent"
+            className={swButtonStyle}
             onClick={handleStart}
           >
             <Play />
           </Button>
           <Button
             size="icon"
-            className="h-6 w-6 hover:border-1 hover:border-accent"
+            className={swButtonStyle}
             onClick={handleReset}
           >
             <RefreshCcw />
@@ -95,7 +98,7 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
         </>
       )}
 
-      <span className="text-sm font-mono text-background">
+      <span className="text-sm font-mono text-accent-foreground">
         {formatHMS(elapsedTime)}
       </span>
     </div>
