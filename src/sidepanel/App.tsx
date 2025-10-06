@@ -14,7 +14,7 @@ import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
 import ApiKeyError from './components/ApiKeyError';
-import Stopwatch from './components/Stopwatch';
+import Stopwatch from './components/StopWatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
 
