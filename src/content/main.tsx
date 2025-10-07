@@ -1,4 +1,7 @@
 import { SubmissionStatus, PathInfo, ProblemMeta } from '@/shared/submitting';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './views/App';
 
 console.log('[LeetBuddy] Content script loaded');
 
@@ -187,3 +190,12 @@ chrome.runtime.onMessage.addListener((req, _s, send) => {
     return true;
   }
 });
+
+const container = document.createElement('div')
+container.id = 'crxjs-app'
+document.body.appendChild(container)
+createRoot(container).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

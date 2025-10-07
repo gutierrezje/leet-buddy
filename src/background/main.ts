@@ -59,3 +59,9 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onInstalled.addListener(() => {
   checkAndStoreApiKeyStatus();
 });
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type === 'OPEN_SIDE_PANEL' && sender.tab?.id) {
+    chrome.sidePanel.open({ tabId: sender.tab.id });
+  }
+});
