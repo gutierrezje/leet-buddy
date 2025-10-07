@@ -173,10 +173,11 @@ export function aggregateCategoryCounts(
   ) as Record<CompactCategory, number>;
 
   for (const tags of tagLists) {
-    const mapped = mapTagsToCompact(tags);
-    mapped.forEach((cat) => {
-      counts[cat] += 1;
-    });
+    for (const cat of tags) {
+      if (cat in counts) {
+        counts[cat as CompactCategory] += 1;
+      }
+    }
   }
   return counts;
 }

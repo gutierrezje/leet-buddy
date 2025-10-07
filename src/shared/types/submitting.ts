@@ -1,4 +1,4 @@
-import { ProblemMeta } from './problems';
+import { CurrentProblem, ProblemMeta } from './problems';
 
 export type SubmissionStatus = 'Accepted' | 'Failed' | 'Manual';
 
@@ -8,7 +8,7 @@ export interface SubmissionRecord {
   at: number; // epoch ms
   elapsedSec?: number;
   source?: 'auto' | 'manual';
-  meta?: ProblemMeta;
+  problem: CurrentProblem;
 }
 
 interface PathInfo {

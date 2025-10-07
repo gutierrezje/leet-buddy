@@ -14,9 +14,10 @@ import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
 import ApiKeyError from './components/ApiKeyError';
-import Stopwatch from './components/StopWatch';
+import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
+import { saveSubmission } from '@/shared/submissions';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -101,6 +102,21 @@ export default function App() {
   }
 
   function handleConfirmSave() {
+    setSaveOpen(false);
+    setResetTick((t) => t + 1);
+
+    saveSubmission(
+      currentProblem!.slug,
+      {
+        submissionId: `manual-${Date.now()}`,
+        status: 'Manual',
+        source: 'manual',
+        elapsedSec: stoppedSec,
+        problem: currentProblem!,
+        at: Date.now(),
+      }
+    );
+
     setSaveOpen(false);
     setResetTick((t) => t + 1);
   }
