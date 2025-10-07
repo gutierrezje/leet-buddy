@@ -35,10 +35,12 @@ export default function SaveModal({
             Time: <span className="font-medium">{formatHMS(elapsedSec)}</span>
           </div>
           <div>
-            Difficulty: <span className="font-medium">{problem.difficulty}</span>
+            Difficulty:{' '}
+            <span className="font-medium">{problem.difficulty}</span>
           </div>
           <div>
-            Categories: <span className="font-medium">{problem.tags?.join(', ')}</span>
+            Categories:{' '}
+            <span className="font-medium">{problem.tags?.join(', ')}</span>
           </div>
         </div>
         <DialogFooter>

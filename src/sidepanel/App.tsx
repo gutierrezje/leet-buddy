@@ -105,17 +105,14 @@ export default function App() {
     setSaveOpen(false);
     setResetTick((t) => t + 1);
 
-    saveSubmission(
-      currentProblem!.slug,
-      {
-        submissionId: `manual-${Date.now()}`,
-        status: 'Manual',
-        source: 'manual',
-        elapsedSec: stoppedSec,
-        problem: currentProblem!,
-        at: Date.now(),
-      }
-    );
+    saveSubmission(currentProblem!.slug, {
+      submissionId: `manual-${Date.now()}`,
+      status: 'Manual',
+      source: 'manual',
+      elapsedSec: stoppedSec,
+      problem: currentProblem!,
+      at: Date.now(),
+    });
 
     setSaveOpen(false);
     setResetTick((t) => t + 1);
@@ -233,7 +230,7 @@ export default function App() {
           });
         } else {
           // if same slug, update in case stale
-          setCurrentProblem(prev => {
+          setCurrentProblem((prev) => {
             if (prev) {
               return {
                 ...prev,

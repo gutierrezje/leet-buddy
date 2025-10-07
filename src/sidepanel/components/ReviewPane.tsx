@@ -1,33 +1,39 @@
-import { aggregateCategoryCounts } from "@/shared/categoryMap";
-import { getAllRecentSubmissions } from "@/shared/submissions";
-import { SubmissionRecord } from "@/shared/types";
-import { useEffect, useState } from "react";
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { aggregateCategoryCounts } from '@/shared/categoryMap';
+import { getAllRecentSubmissions } from '@/shared/submissions';
+import { SubmissionRecord } from '@/shared/types';
+import { useEffect, useState } from 'react';
 
 export default function ReviewPane() {
-  const [submissions, setSubmissions] = useState<Record<string, SubmissionRecord[]>>({});
+  const [submissions, setSubmissions] = useState<
+    Record<string, SubmissionRecord[]>
+  >({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Initial load
-    getAllRecentSubmissions().then(data => {
+    getAllRecentSubmissions().then((data) => {
       setSubmissions(data);
       setLoading(false);
     });
 
     // Listen for storage changes
     const onStorageChange = (
-      changes: Record<string, chrome.storage.StorageChange>, 
+      changes: Record<string, chrome.storage.StorageChange>,
       area: string
     ) => {
       // Only care about chrome.storage.local changes
       if (area !== 'local') return;
       // Check for changed keys related to submissions
-      const touched = Object.keys(changes).filter(k => k.startsWith('submissions::'));
+      const touched = Object.keys(changes).filter((k) =>
+        k.startsWith('submissions::')
+      );
       if (touched) {
         getAllRecentSubmissions().then(setSubmissions);
       }
     };
-    
+
     chrome.storage.onChanged.addListener(onStorageChange);
     return () => chrome.storage.onChanged.removeListener(onStorageChange);
   }, []);
@@ -49,10 +55,10 @@ export default function ReviewPane() {
     );
   }
 
-  const allTagLists = entries.flatMap(([_, recs]) => 
+  const allTagLists = entries.flatMap(([_, recs]) =>
     recs
-      .filter(r => r.problem.tags && r.problem.tags.length > 0)
-      .map(r => r.problem.tags!)
+      .filter((r) => r.problem.tags && r.problem.tags.length > 0)
+      .map((r) => r.problem.tags!)
   );
 
   const categoryCounts = aggregateCategoryCounts(allTagLists);
@@ -62,8 +68,12 @@ export default function ReviewPane() {
     .sort((a, b) => b[1] - a[1]);
 
   // Count by difficulty
-  const difficultyCounts: Record<string, number> = {};
-  for(const [_, recs] of entries) {
+  const difficultyCounts: Record<string, number> = {
+    Easy: 0,
+    Medium: 0,
+    Hard: 0,
+  };
+  for (const [_, recs] of entries) {
     const difficulty = recs[0]?.problem.difficulty;
     if (difficulty) {
       difficultyCounts[difficulty] = (difficultyCounts[difficulty] || 0) + 1;
@@ -71,37 +81,52 @@ export default function ReviewPane() {
   }
 
   return (
-    <div className="p-4 text-sm space-y-3">
-      <h2 className="text-lg font-semibold">Completion Overview: </h2>
-      <div>{entries.length} Completed</div>
+    <div className="px-4 text-sm space-y-3">
+      <div className="border-b mt-2">
+        <div className="text-lg font-semibold">Completion Overview: </div>
+        <div className="flex justify-center my-2 gap-4">
+          <Card className="flex flex-grow items-center justify-center flex-col gap-0 py-2">
+            <div className="text-2xl font-bold text-primary">
+              {entries.length}
+            </div>
+            <div>Completed</div>
+          </Card>
+          <Card className="flex flex-grow items-center justify-center flex-col gap-1 py-2">
+            <div>Difficulty Split</div>
+            <div className="flex flex-row items-center justify-center gap-4">
+              <span className="text-green-500">{difficultyCounts.Easy}E</span>
+              <span className="text-yellow-500">
+                {difficultyCounts.Medium}M
+              </span>
+              <span className="text-red-500">{difficultyCounts.Hard}H</span>
+            </div>
+          </Card>
+        </div>
+      </div>
 
-      <div>Difficulty Breakdown:</div>
-      <ul className="list-disc list-inside">
-        {Object.entries(difficultyCounts).map(([difficulty, count]) => (
-          <li key={difficulty}>
-            {difficulty}: {count}
-          </li>
-        ))}
-      </ul>
+      <div>
+        <div className="text-md font-semibold">Pattern Coverage: </div>
+        <ScrollArea>
+          {sortedCategories.map(([cat, count]) => (
+            <Card key={cat} className="flex justify-between flex-row px-4 my-2">
+              <span>{cat}</span>
+              <span>{count}</span>
+            </Card>
+          ))}
+        </ScrollArea>
+      </div>
 
-      <div>Pattern Coverage: </div>
-      <ul className="list-disc list-inside">
-        {sortedCategories.map(([cat, count]) => (
-          <li key={cat}>
-            {cat}: {count}
-          </li>
-        ))}
-      </ul>
-
-      <div>Recently Completed:</div>
-      <ul className="list-disc list-inside">
-        {entries.slice(0, 10).map(([slug, recs]) => (
-          <li key={slug}>
-            {recs[0]?.problem.title} ({recs[0]?.problem.difficulty || 'Unknown'})
-          </li>
-        ))}
-      </ul>
-
+      <div>
+        <div className="text-md font-semibold">Recently Completed:</div>
+        <ul className="list-disc list-inside">
+          {entries.slice(0, 10).map(([slug, recs]) => (
+            <li key={slug}>
+              {recs[0]?.problem.title} (
+              {recs[0]?.problem.difficulty || 'Unknown'})
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

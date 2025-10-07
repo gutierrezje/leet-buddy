@@ -55,7 +55,7 @@ TODO
 - [ ] user problem solving history data
   - [x] Use graphql to query for problem tags
   - [x] compact/map problem categories together
-  - [] implement some timing functionality
+  - [x] implement some timing functionality
   - [] Review page to display user stats
 - [ ] support for other LLM models
 - [ ] persist chat history
@@ -65,4 +65,9 @@ Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
 
-- hook up save button to storage
+- save modal styling
+- figure out review stats to track
+- review stats styling
+- have timer auto start on open
+- prompt submit on lc submission automatically
+-

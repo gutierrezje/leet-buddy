@@ -64,35 +64,19 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
     <div className="flex items-center rounded-md border bg-accent px-2 py-1 gap-2">
       {isRunning ? (
         <>
-          <Button
-            size="icon"
-            className={swButtonStyle}
-            onClick={handlePause}
-          >
+          <Button size="icon" className={swButtonStyle} onClick={handlePause}>
             <Pause />
           </Button>
-          <Button
-            size="icon"
-            className={swButtonStyle}
-            onClick={handleStop}
-          >
+          <Button size="icon" className={swButtonStyle} onClick={handleStop}>
             <CheckCircle />
           </Button>
         </>
       ) : (
         <>
-          <Button
-            size="icon"
-            className={swButtonStyle}
-            onClick={handleStart}
-          >
+          <Button size="icon" className={swButtonStyle} onClick={handleStart}>
             <Play />
           </Button>
-          <Button
-            size="icon"
-            className={swButtonStyle}
-            onClick={handleReset}
-          >
+          <Button size="icon" className={swButtonStyle} onClick={handleReset}>
             <RefreshCcw />
           </Button>
         </>

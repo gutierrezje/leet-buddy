@@ -24,7 +24,7 @@ export default function ChatPane({
 }: Props) {
   return (
     <div className="flex-1 flex flex-col">
-      <ScrollArea className="flex flex-1 p-4 py-0 overflow-hidden">
+      <ScrollArea className="flex flex-1 p-4 py-0 mt-2 overflow-hidden">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
