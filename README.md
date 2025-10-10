@@ -66,7 +66,6 @@ Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
 
-- save modal styling
 - figure out review stats to track
 - review stats styling
 - have timer auto start on open

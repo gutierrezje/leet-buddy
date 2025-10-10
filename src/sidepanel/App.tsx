@@ -346,11 +346,14 @@ export default function App() {
           </div>
         </div>
         <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
+
       </div>
+
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
 
-      {activeTab === 'chat' ? (
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'chat' ? (
         <ChatPane
           messages={messages}
           input={input}
@@ -362,6 +365,8 @@ export default function App() {
       ) : (
         <ReviewPane />
       )}
+      </div>
+      
 
       <SaveModal
         open={saveOpen}

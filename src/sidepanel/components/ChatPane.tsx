@@ -23,14 +23,14 @@ export default function ChatPane({
   onSend,
 }: Props) {
   return (
-    <div className="flex-1 flex flex-col">
-      <ScrollArea className="flex flex-1 p-4 py-0 mt-2 overflow-hidden">
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 p-4 py-0 mt-2 overflow-hidden">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
       </ScrollArea>
 
-      <div className="px-4 py-2 border-t border-border">
+      <div className="flex-shrink-0 px-4 py-2 border-t border-border">
         <h2 className="text-lg font-semibold">Hints:</h2>
         <div className="mt-2 grid grid-cols-2 gap-4">
           {hintPrompts.map((hint) => {

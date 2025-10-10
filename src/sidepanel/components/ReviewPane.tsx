@@ -4,6 +4,7 @@ import { aggregateCategoryCounts } from '@/shared/categoryMap';
 import { getAllRecentSubmissions } from '@/shared/submissions';
 import { SubmissionRecord } from '@/shared/types';
 import { useEffect, useState } from 'react';
+import { PatternHeatmap } from './PatternHeatmap';
 
 export default function ReviewPane() {
   const [submissions, setSubmissions] = useState<
@@ -106,14 +107,9 @@ export default function ReviewPane() {
 
       <div>
         <div className="text-lg font-semibold">Topic Coverage: </div>
-        <ScrollArea>
-          {sortedCategories.map(([cat, count]) => (
-            <Card key={cat} className="flex justify-between flex-row px-4 my-2">
-              <span>{cat}</span>
-              <span>{count}</span>
-            </Card>
-          ))}
-        </ScrollArea>
+        {/* <ScrollArea> */}
+          <PatternHeatmap />
+        {/* </ScrollArea> */}
       </div>
 
       <div>
