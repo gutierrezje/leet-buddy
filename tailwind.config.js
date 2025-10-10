@@ -51,6 +51,11 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        difficulty: {
+          easy: '--var(--difficulty-easy)',
+          medium: '--var(--difficulty-medium)',
+          hard: '--var(--difficulty-hard)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

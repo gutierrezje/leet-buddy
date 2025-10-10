@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Message } from '../types';
+import { Message } from '@/shared/types';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {

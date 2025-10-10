@@ -1,4 +1,4 @@
-import { CurrentProblem, ProblemMeta } from './problems';
+import { CurrentProblem } from './problems';
 
 export type SubmissionStatus = 'Accepted' | 'Failed' | 'Manual';
 
@@ -11,7 +11,7 @@ export interface SubmissionRecord {
   problem: CurrentProblem;
 }
 
-interface PathInfo {
+export interface PathInfo {
   problemSlug: string;
   submissionId?: string;
 }

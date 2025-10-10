@@ -1,4 +1,4 @@
-import { SubmissionStatus, PathInfo, ProblemMeta } from '@/shared/submitting';
+import { SubmissionStatus, PathInfo, ProblemMeta } from '@/shared/types';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import SidebarLauncher from './views/SidebarLauncher';

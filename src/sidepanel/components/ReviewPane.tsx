@@ -83,7 +83,7 @@ export default function ReviewPane() {
   return (
     <div className="px-4 text-sm space-y-3">
       <div className="border-b mt-2">
-        <div className="text-lg font-semibold">Completion Overview: </div>
+        <div className="text-lg font-semibold">Overview: </div>
         <div className="flex justify-center my-2 gap-4">
           <Card className="flex flex-grow items-center justify-center flex-col gap-0 py-2">
             <div className="text-2xl font-bold text-primary">
@@ -94,18 +94,18 @@ export default function ReviewPane() {
           <Card className="flex flex-grow items-center justify-center flex-col gap-1 py-2">
             <div>Difficulty Split</div>
             <div className="flex flex-row items-center justify-center gap-4">
-              <span className="text-green-500">{difficultyCounts.Easy}E</span>
-              <span className="text-yellow-500">
+              <span className="text-difficulty-easy ">{difficultyCounts.Easy}E</span>
+              <span className="text-difficulty-medium">
                 {difficultyCounts.Medium}M
               </span>
-              <span className="text-red-500">{difficultyCounts.Hard}H</span>
+              <span className="text-difficulty-hard">{difficultyCounts.Hard}H</span>
             </div>
           </Card>
         </div>
       </div>
 
       <div>
-        <div className="text-md font-semibold">Pattern Coverage: </div>
+        <div className="text-lg font-semibold">Topic Coverage: </div>
         <ScrollArea>
           {sortedCategories.map(([cat, count]) => (
             <Card key={cat} className="flex justify-between flex-row px-4 my-2">
@@ -117,7 +117,7 @@ export default function ReviewPane() {
       </div>
 
       <div>
-        <div className="text-md font-semibold">Recently Completed:</div>
+        <div className="text-lg font-semibold">Recently Completed:</div>
         <ul className="list-disc list-inside">
           {entries.slice(0, 10).map(([slug, recs]) => (
             <li key={slug}>

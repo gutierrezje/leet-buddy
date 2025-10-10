@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import ChatMessage from './ChatMessage';
-import { Message, HintPrompt } from '../types';
+import { Message, HintPrompt } from '@/shared/types';
 
 type Props = {
   messages: Message[];

@@ -59,6 +59,7 @@ TODO
   - [] Review page to display user stats
 - [ ] support for other LLM models
 - [ ] persist chat history
+- [ ] handle case of user tokens running out
 - [ ] handle gating on premium problems if necessary
 
 Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
