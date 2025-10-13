@@ -1,6 +1,4 @@
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { aggregateCategoryCounts } from '@/shared/categoryMap';
 import { getAllRecentSubmissions } from '@/shared/submissions';
 import { SubmissionRecord } from '@/shared/types';
 import { useEffect, useState } from 'react';
@@ -55,18 +53,6 @@ export default function ReviewPane() {
       </div>
     );
   }
-
-  const allTagLists = entries.flatMap(([_, recs]) =>
-    recs
-      .filter((r) => r.problem.tags && r.problem.tags.length > 0)
-      .map((r) => r.problem.tags!)
-  );
-
-  const categoryCounts = aggregateCategoryCounts(allTagLists);
-
-  const sortedCategories = Object.entries(categoryCounts)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1]);
 
   // Count by difficulty
   const difficultyCounts: Record<string, number> = {

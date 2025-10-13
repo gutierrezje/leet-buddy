@@ -23,6 +23,8 @@ const levelColors: Record<string, string> = {
 export function computeProficiencyScore(
     submissions: Record<string, SubmissionRecord[]>
 ): PatternProficiency[] {
+    levelColors;
+    submissions;
     return [{} as PatternProficiency]; // Placeholder
 }
 

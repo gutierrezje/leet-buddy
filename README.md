@@ -69,8 +69,5 @@ up next:
 
 - figure out review stats to track
 - review stats styling
-- store time when problem is queried and when success is detected for automatic mode time keeping
-- prompt submit on lc submission automatically
-- change currentproblem to track start time
-- calculate elapsed time on auto submit
+- compare submission id's in storage to not have duplicate submissions
 - handle auto submit message in sidebar (affect: stopwatch, modal, etc)

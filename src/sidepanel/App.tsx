@@ -87,13 +87,14 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
   const [saveOpen, setSaveOpen] = useState(false);
   const [stoppedSec, setStoppedSec] = useState(0);
-  const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(
-    null
-  );
+  const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(null);
   const [resetTick, setResetTick] = useState(0);
+  const [submissionSource, setSubmissionSource] = useState<'auto' | 'manual'>('manual');
+  const [autoSubmissionId, setAutoSubmissionId] = useState<string | null>(null);
 
   function handleStopwatchStop(elapsed: number) {
     setStoppedSec(elapsed);
+    setSubmissionSource('manual');
     setSaveOpen(true);
   }
 
@@ -103,11 +104,14 @@ export default function App() {
 
   function handleConfirmSave() {
     setSaveOpen(false);
-    setResetTick((t) => t + 1);
+
+    const submissionId = submissionSource === 'auto'
+      ? (autoSubmissionId || `auto-${Date.now()}`)
+      : `manual-${Date.now()}`;
 
     saveSubmission(currentProblem!.slug, {
-      submissionId: `manual-${Date.now()}`,
-      source: 'manual',
+      submissionId,
+      source: submissionSource,
       elapsedSec: stoppedSec,
       problem: currentProblem!,
       at: Date.now(),
@@ -213,6 +217,8 @@ export default function App() {
       slug?: string;
       difficulty?: string;
       tags?: string[];
+      submissionId?: string;
+      at?: number;
     }) {
       if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
         const compact = mapTagsToCompact(msg.tags || []);
@@ -243,7 +249,32 @@ export default function App() {
           });
         }
       }
+
+      // Handle accepted submissions
+      if (msg.type === 'SUBMISSION_ACCEPTED' && msg.slug) {
+        console.log(`[LeetBuddy] Auto-detected accepted submission for ${msg.slug}`);
+
+        chrome.storage.local.get(['currentProblem'], data => {
+          const problem = data.currentProblem as CurrentProblem | null;
+          if (!problem || problem.slug != msg.slug) {
+            console.warn('[LeetBuddy] Warning: Current problem mismatch with the submission slug.');
+            return;
+          }
+
+          const endAt = msg.at || Date.now();
+          const elapsedSec = problem.startAt
+            ? Math.floor((endAt - problem.startAt) / 1000)
+            : 0;
+
+          setStoppedSec(elapsedSec);
+          setSubmissionSource('auto');
+          setAutoSubmissionId(msg.submissionId || `auto-${endAt}`);
+          setSaveOpen(true);
+        })
+      }
     }
+
+
     chrome.runtime.onMessage.addListener(handleMessage);
 
     return () => {

@@ -16,7 +16,7 @@ function parsePath(path: string = location.pathname): PathInfo {
 
   // /submissions/<id>
   const subMatch = path.match(/\/submissions\/(\d+)/);
-  const submissionId = subMatch?.[1];
+  const submissionId = subMatch?.[1] || '';
 
   return { problemSlug, submissionId };
 }
@@ -35,20 +35,22 @@ const emittedSubmissionKeys = new Set<string>();
 
 function detectSubmissionResult() {
   const { problemSlug, submissionId } = parsePath();
-  if (!problemSlug || !submissionId) return;
+  if (!submissionId) return;
 
   const status = readSubmissionStatus();
   if (status !== 'Accepted') return;
 
   const key = `${problemSlug}#${submissionId}`;
+  console.log('Detected accepted submission:', key);
+  console.log('Emitted submissions so far:', emittedSubmissionKeys);
   if (emittedSubmissionKeys.has(key)) return;
   emittedSubmissionKeys.add(key);
+  console.log('Emitting submission accepted event for key:', key);
 
   safeSend({
-    type: 'PROBLEM_SUBMISSION_RESULT',
+    type: 'SUBMISSION_ACCEPTED',
     slug: problemSlug,
     submissionId,
-    status,
     at: Date.now(),
   });
 }
@@ -75,10 +77,23 @@ function safeSend(msg: any) {
 }
 
 function persistCurrentProblem(problem: CurrentProblem) {
-  chrome.storage.local.set(
-    { currentProblem: problem },
-    () => void chrome.runtime.lastError
-  );
+  chrome.storage.local.get(['currentProblem'], data => {
+    const existing: CurrentProblem | null = data.currentProblem || null;
+
+    const startAt = existing?.slug === problem.slug
+      ? existing.startAt
+      : Date.now();
+
+    chrome.storage.local.set(
+      {
+        currentProblem: {
+          ...problem,
+          startAt
+        }
+      },
+      () => void chrome.runtime.lastError
+    );
+  });
 }
 
 async function fetchMeta(
@@ -114,7 +129,6 @@ async function fetchMeta(
       title: q.title,
       difficulty: q.difficulty,
       tags: q.topicTags.map((t: any) => t.name),
-      startAt: Date.now(),
     };
   } catch (e) {
     if ((e as any).name !== 'AbortError') {
@@ -151,16 +165,19 @@ async function handleSlugChange() {
   const problem = await fetchMeta(slug, inFlightAbort.signal);
   if (slug !== currentSlug) return; // navigated away during fetch
 
+  if (problem) {
+    cache[slug] = problem;
+  }
+
   const finalProblem: CurrentProblem = problem || {
-    // Fallback (DOM or slug)
     slug,
+    // Fallback (DOM or slug)
     title: domTitle() || slug,
     difficulty: '',
     tags: [],
     startAt: Date.now(),
   };
 
-  cache[slug] = finalProblem;
   const msg = { type: 'PROBLEM_METADATA', ...finalProblem };
   safeSend(msg);
   persistCurrentProblem(finalProblem);
