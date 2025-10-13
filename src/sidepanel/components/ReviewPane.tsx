@@ -4,7 +4,7 @@ import { aggregateCategoryCounts } from '@/shared/categoryMap';
 import { getAllRecentSubmissions } from '@/shared/submissions';
 import { SubmissionRecord } from '@/shared/types';
 import { useEffect, useState } from 'react';
-import { PatternHeatmap } from './PatternHeatmap';
+import { TopicHeatmap } from './TopicHeatmap';
 
 export default function ReviewPane() {
   const [submissions, setSubmissions] = useState<
@@ -107,9 +107,7 @@ export default function ReviewPane() {
 
       <div>
         <div className="text-lg font-semibold">Topic Coverage: </div>
-        {/* <ScrollArea> */}
-          <PatternHeatmap />
-        {/* </ScrollArea> */}
+          <TopicHeatmap />
       </div>
 
       <div>

@@ -61,6 +61,7 @@ TODO
 - [ ] persist chat history
 - [ ] handle case of user tokens running out
 - [ ] handle gating on premium problems if necessary
+- [ ] cross browser support
 
 Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
@@ -68,6 +69,8 @@ up next:
 
 - figure out review stats to track
 - review stats styling
-- have timer auto start on open
+- store time when problem is queried and when success is detected for automatic mode time keeping
 - prompt submit on lc submission automatically
--
+- change currentproblem to track start time
+- calculate elapsed time on auto submit
+- handle auto submit message in sidebar (affect: stopwatch, modal, etc)

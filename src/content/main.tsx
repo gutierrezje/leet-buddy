@@ -1,4 +1,4 @@
-import { SubmissionStatus, PathInfo, ProblemMeta } from '@/shared/types';
+import { SubmissionStatus, PathInfo, CurrentProblem } from '@/shared/types';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import SidebarLauncher from './views/SidebarLauncher';
@@ -38,7 +38,7 @@ function detectSubmissionResult() {
   if (!problemSlug || !submissionId) return;
 
   const status = readSubmissionStatus();
-  if (!status) return;
+  if (status !== 'Accepted') return;
 
   const key = `${problemSlug}#${submissionId}`;
   if (emittedSubmissionKeys.has(key)) return;
@@ -63,7 +63,7 @@ function getCSRFToken(): string {
   return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 }
 
-const cache: Record<string, ProblemMeta> = {};
+const cache: Record<string, CurrentProblem> = {};
 let currentSlug: string | null = null;
 let inFlightAbort: AbortController | null = null;
 
@@ -74,15 +74,9 @@ function safeSend(msg: any) {
   } catch {}
 }
 
-function persistCurrentProblem(payload: {
-  slug: string;
-  title: string;
-  difficulty: string;
-  isPaidOnly: boolean;
-  tags: string[];
-}) {
+function persistCurrentProblem(problem: CurrentProblem) {
   chrome.storage.local.set(
-    { currentProblem: payload },
+    { currentProblem: problem },
     () => void chrome.runtime.lastError
   );
 }
@@ -90,7 +84,7 @@ function persistCurrentProblem(payload: {
 async function fetchMeta(
   slug: string,
   signal: AbortSignal
-): Promise<ProblemMeta | null> {
+): Promise<CurrentProblem | null> {
   const query = `
     query q($titleSlug: String!) {
       question(titleSlug: $titleSlug) {
@@ -116,10 +110,11 @@ async function fetchMeta(
     const q = json?.data?.question;
     if (!q) return null;
     return {
+      slug,
       title: q.title,
       difficulty: q.difficulty,
-      isPaidOnly: q.isPaidOnly,
       tags: q.topicTags.map((t: any) => t.name),
+      startAt: Date.now(),
     };
   } catch (e) {
     if ((e as any).name !== 'AbortError') {
@@ -140,29 +135,35 @@ async function handleSlugChange() {
 
   // Serve from cache fast
   if (cache[slug]) {
-    const meta = cache[slug];
-    const msg = { type: 'PROBLEM_METADATA', slug, ...meta };
+    const problem = cache[slug];
+
+    // Update startAt if new session
+    if (!problem.startAt) {
+      problem.startAt = Date.now();
+    }
+    const msg = { type: 'PROBLEM_METADATA', ...problem };
     safeSend(msg);
-    persistCurrentProblem(msg);
+    persistCurrentProblem(problem);
     return;
   }
 
   // Fetch once
-  const meta = await fetchMeta(slug, inFlightAbort.signal);
+  const problem = await fetchMeta(slug, inFlightAbort.signal);
   if (slug !== currentSlug) return; // navigated away during fetch
 
-  const finalMeta: ProblemMeta = meta || {
+  const finalProblem: CurrentProblem = problem || {
     // Fallback (DOM or slug)
+    slug,
     title: domTitle() || slug,
     difficulty: '',
-    isPaidOnly: false,
     tags: [],
+    startAt: Date.now(),
   };
 
-  cache[slug] = finalMeta;
-  const msg = { type: 'PROBLEM_METADATA', slug, ...finalMeta };
+  cache[slug] = finalProblem;
+  const msg = { type: 'PROBLEM_METADATA', ...finalProblem };
   safeSend(msg);
-  persistCurrentProblem(msg);
+  persistCurrentProblem(finalProblem);
 }
 
 function cycle() {

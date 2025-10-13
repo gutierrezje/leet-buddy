@@ -107,7 +107,6 @@ export default function App() {
 
     saveSubmission(currentProblem!.slug, {
       submissionId: `manual-${Date.now()}`,
-      status: 'Manual',
       source: 'manual',
       elapsedSec: stoppedSec,
       problem: currentProblem!,
@@ -345,7 +344,10 @@ export default function App() {
             </span>
           </div>
         </div>
-        <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
+        <Stopwatch 
+          onStop={handleStopwatchStop}
+          resetTrigger={resetTick}
+        />
 
       </div>
 

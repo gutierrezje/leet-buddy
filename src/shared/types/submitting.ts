@@ -1,10 +1,9 @@
 import { CurrentProblem } from './problems';
 
-export type SubmissionStatus = 'Accepted' | 'Failed' | 'Manual';
+export type SubmissionStatus = 'Accepted' | 'Failed';
 
 export interface SubmissionRecord {
   submissionId: string;
-  status: SubmissionStatus;
   at: number; // epoch ms
   elapsedSec?: number;
   source?: 'auto' | 'manual';
