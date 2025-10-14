@@ -11,7 +11,6 @@ export default function ReviewPane() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    clearSubmissions(); // FIXME: remove
     // Initial load
     getAllSubmissions().then((data) => {
       setSubmissions(data);
@@ -82,11 +81,15 @@ export default function ReviewPane() {
           <Card className="flex flex-grow items-center justify-center flex-col gap-1 py-2">
             <div>Difficulty Split</div>
             <div className="flex flex-row items-center justify-center gap-4">
-              <span className="text-difficulty-easy ">{difficultyCounts.Easy}E</span>
+              <span className="text-difficulty-easy ">
+                {difficultyCounts.Easy}E
+              </span>
               <span className="text-difficulty-medium">
                 {difficultyCounts.Medium}M
               </span>
-              <span className="text-difficulty-hard">{difficultyCounts.Hard}H</span>
+              <span className="text-difficulty-hard">
+                {difficultyCounts.Hard}H
+              </span>
             </div>
           </Card>
         </div>
@@ -94,7 +97,7 @@ export default function ReviewPane() {
 
       <div>
         <div className="text-lg font-semibold">Topic Coverage: </div>
-          <TopicHeatmap />
+        <TopicHeatmap />
       </div>
 
       <div>
@@ -102,8 +105,7 @@ export default function ReviewPane() {
         <ul className="list-disc list-inside">
           {entries.slice(0, 10).map(([slug, rec]) => (
             <li key={slug}>
-              {rec?.problem.title} (
-              {rec?.problem.difficulty || 'Unknown'})
+              {rec?.problem.title} ({rec?.problem.difficulty || 'Unknown'})
             </li>
           ))}
         </ul>

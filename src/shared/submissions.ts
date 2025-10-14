@@ -6,21 +6,16 @@ function keyFor(slug: string) {
   return `${PREFIX}${slug}`;
 }
 
-export function saveSubmission(
-  slug: string,
-  rec: SubmissionRecord
-) {
+export function saveSubmission(slug: string, rec: SubmissionRecord) {
   const key = keyFor(slug);
 
   chrome.storage.local.set({ [key]: rec }, () => void chrome.runtime.lastError);
 }
 
-export function getSubmission(
-  slug: string
-): Promise<SubmissionRecord | null> {
+export function getSubmission(slug: string): Promise<SubmissionRecord | null> {
   const key = keyFor(slug);
-  return new Promise(resolve => {
-    chrome.storage.local.get([key], data => {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([key], (data) => {
       resolve(data[key] || null);
     });
   });
@@ -30,7 +25,7 @@ export async function getAllSubmissions(): Promise<
   Record<string, SubmissionRecord>
 > {
   return new Promise((resolve) => {
-    chrome.storage.local.get(null, items => {
+    chrome.storage.local.get(null, (items) => {
       const out: Record<string, SubmissionRecord> = {};
       for (const [k, v] of Object.entries(items)) {
         if (k.startsWith(PREFIX)) {

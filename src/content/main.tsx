@@ -74,19 +74,18 @@ function safeSend(msg: any) {
 }
 
 function persistCurrentProblem(problem: CurrentProblem) {
-  chrome.storage.local.get(['currentProblem'], data => {
+  chrome.storage.local.get(['currentProblem'], (data) => {
     const existing: CurrentProblem | null = data.currentProblem || null;
 
-    const startAt = existing?.slug === problem.slug
-      ? existing.startAt
-      : Date.now();
+    const startAt =
+      existing?.slug === problem.slug ? existing.startAt : Date.now();
 
     chrome.storage.local.set(
       {
         currentProblem: {
           ...problem,
-          startAt
-        }
+          startAt,
+        },
       },
       () => void chrome.runtime.lastError
     );

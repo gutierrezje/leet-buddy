@@ -9,7 +9,12 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import { Message, HintPrompt, CurrentProblem, SubmissionRecord } from '@/shared/types';
+import {
+  Message,
+  HintPrompt,
+  CurrentProblem,
+  SubmissionRecord,
+} from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
@@ -87,20 +92,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
   const [saveOpen, setSaveOpen] = useState(false);
   const [stoppedSec, setStoppedSec] = useState(0);
-  const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(null);
+  const [currentProblem, setCurrentProblem] = useState<CurrentProblem | null>(
+    null
+  );
   const [resetTick, setResetTick] = useState(0);
-  const [submissionSource, setSubmissionSource] = useState<'auto' | 'manual'>('manual');
+  const [submissionSource, setSubmissionSource] = useState<'auto' | 'manual'>(
+    'manual'
+  );
   const [autoSubmissionId, setAutoSubmissionId] = useState<string | null>(null);
-  const [prevSubmission, setPrevSubmission] = useState<SubmissionRecord | null>(null);
+  const [prevTime, setPrevTime] = useState<number | undefined>(undefined);
 
   function handleStopwatchStop(elapsed: number) {
     setStoppedSec(elapsed);
     setSubmissionSource('manual');
-    setPrevSubmission(null);
+    setPrevTime(undefined);
     setSaveOpen(true);
 
     if (currentProblem?.slug) {
-      getSubmission(currentProblem.slug).then(setPrevSubmission);
+      getSubmission(currentProblem.slug).then((rec) => {
+        setPrevTime(rec?.elapsedSec );
+      });
     }
   }
 
@@ -108,23 +119,24 @@ export default function App() {
     setSaveOpen(false);
   }
 
-  function handleConfirmSave() {
+  function handleConfirmSave(finalElapsedSec: number) {
     setSaveOpen(false);
     setResetTick((t) => t + 1);
 
-    const submissionId = submissionSource === 'auto'
-      ? (autoSubmissionId || `auto-${Date.now()}`)
-      : `manual-${Date.now()}`;
+    const now = Date.now();
+
+    const submissionId =
+      submissionSource === 'auto'
+        ? autoSubmissionId || `auto-${now}`
+        : `manual-${now}`;
 
     saveSubmission(currentProblem!.slug, {
       submissionId,
       source: submissionSource,
-      elapsedSec: stoppedSec,
+      elapsedSec: finalElapsedSec,
       problem: currentProblem!,
-      at: Date.now(),
+      at: now,
     });
-
-    setPrevSubmission(null);
   }
 
   // Gets the API key from storage
@@ -259,12 +271,16 @@ export default function App() {
 
       // Handle accepted submissions
       if (msg.type === 'SUBMISSION_ACCEPTED' && msg.slug) {
-        console.log(`[LeetBuddy] Auto-detected accepted submission for ${msg.slug}`);
+        console.log(
+          `[LeetBuddy] Auto-detected accepted submission for ${msg.slug}`
+        );
 
-        chrome.storage.local.get(['currentProblem'], async data => {
+        chrome.storage.local.get(['currentProblem'], async (data) => {
           const problem = data.currentProblem as CurrentProblem | null;
           if (!problem || problem.slug != msg.slug) {
-            console.warn('[LeetBuddy] Warning: Current problem mismatch with the submission slug.');
+            console.warn(
+              '[LeetBuddy] Warning: Current problem mismatch with the submission slug.'
+            );
             return;
           }
 
@@ -281,12 +297,11 @@ export default function App() {
           setStoppedSec(elapsedSec);
           setSubmissionSource('auto');
           setAutoSubmissionId(msg.submissionId || `auto-${endAt}`);
-          setPrevSubmission(existing);
+          setPrevTime(existing?.elapsedSec);
           setSaveOpen(true);
-        })
+        });
       }
     }
-
 
     chrome.runtime.onMessage.addListener(handleMessage);
 
@@ -388,31 +403,25 @@ export default function App() {
             </span>
           </div>
         </div>
-        <Stopwatch 
-          onStop={handleStopwatchStop}
-          resetTrigger={resetTick}
-        />
-
+        <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
       </div>
-
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
 
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'chat' ? (
-        <ChatPane
-          messages={messages}
-          input={input}
-          loading={loading}
-          hintPrompts={hintPrompts}
-          onChangeInput={setInput}
-          onSend={handleSendMessage}
-        />
-      ) : (
-        <ReviewPane />
-      )}
+          <ChatPane
+            messages={messages}
+            input={input}
+            loading={loading}
+            hintPrompts={hintPrompts}
+            onChangeInput={setInput}
+            onSend={handleSendMessage}
+          />
+        ) : (
+          <ReviewPane />
+        )}
       </div>
-      
 
       <SaveModal
         open={saveOpen}
@@ -420,6 +429,7 @@ export default function App() {
         onCancel={handleCancelSave}
         problem={currentProblem!}
         elapsedSec={stoppedSec}
+        previousTime={prevTime}
       />
     </div>
   );
