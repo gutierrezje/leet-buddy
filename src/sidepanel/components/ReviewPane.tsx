@@ -1,18 +1,19 @@
 import { Card } from '@/components/ui/card';
-import { getAllRecentSubmissions } from '@/shared/submissions';
+import { getAllSubmissions, clearSubmissions } from '@/shared/submissions';
 import { SubmissionRecord } from '@/shared/types';
 import { useEffect, useState } from 'react';
 import { TopicHeatmap } from './TopicHeatmap';
 
 export default function ReviewPane() {
   const [submissions, setSubmissions] = useState<
-    Record<string, SubmissionRecord[]>
+    Record<string, SubmissionRecord>
   >({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    clearSubmissions(); // FIXME: remove
     // Initial load
-    getAllRecentSubmissions().then((data) => {
+    getAllSubmissions().then((data) => {
       setSubmissions(data);
       setLoading(false);
     });
@@ -29,7 +30,7 @@ export default function ReviewPane() {
         k.startsWith('submissions::')
       );
       if (touched) {
-        getAllRecentSubmissions().then(setSubmissions);
+        getAllSubmissions().then(setSubmissions);
       }
     };
 
@@ -60,8 +61,8 @@ export default function ReviewPane() {
     Medium: 0,
     Hard: 0,
   };
-  for (const [_, recs] of entries) {
-    const difficulty = recs[0]?.problem.difficulty;
+  for (const [_, rec] of entries) {
+    const difficulty = rec.problem.difficulty;
     if (difficulty) {
       difficultyCounts[difficulty] = (difficultyCounts[difficulty] || 0) + 1;
     }
@@ -99,10 +100,10 @@ export default function ReviewPane() {
       <div>
         <div className="text-lg font-semibold">Recently Completed:</div>
         <ul className="list-disc list-inside">
-          {entries.slice(0, 10).map(([slug, recs]) => (
+          {entries.slice(0, 10).map(([slug, rec]) => (
             <li key={slug}>
-              {recs[0]?.problem.title} (
-              {recs[0]?.problem.difficulty || 'Unknown'})
+              {rec?.problem.title} (
+              {rec?.problem.difficulty || 'Unknown'})
             </li>
           ))}
         </ul>

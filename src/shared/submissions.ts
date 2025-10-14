@@ -1,7 +1,6 @@
 import { SubmissionRecord } from '@/shared/types';
 
 const PREFIX = 'submissions::';
-export const MAX_SUBMISSIONS_PER_PROBLEM = 5;
 
 function keyFor(slug: string) {
   return `${PREFIX}${slug}`;
@@ -9,49 +8,34 @@ function keyFor(slug: string) {
 
 export function saveSubmission(
   slug: string,
-  rec: SubmissionRecord,
-  max: number = MAX_SUBMISSIONS_PER_PROBLEM
+  rec: SubmissionRecord
 ) {
   const key = keyFor(slug);
-  chrome.storage.local.get([key], (data) => {
-    const current: SubmissionRecord[] = Array.isArray(data[key])
-      ? data[key]
-      : [];
-    // de-dupe the submissionId and keep the newest at the front
-    const next = [
-      rec,
-      ...current.filter((s) => s.submissionId !== rec.submissionId),
-    ]
-      .sort((a, b) => b.at - a.at)
-      .slice(0, max);
-    chrome.storage.local.set(
-      { [key]: next },
-      () => void chrome.runtime.lastError
-    );
-  });
+
+  chrome.storage.local.set({ [key]: rec }, () => void chrome.runtime.lastError);
 }
 
-export function getRecentSubmissions(
+export function getSubmission(
   slug: string
-): Promise<SubmissionRecord[]> {
+): Promise<SubmissionRecord | null> {
   const key = keyFor(slug);
-  return new Promise((resolve) => {
-    chrome.storage.local.get([key], (data) => {
-      resolve(Array.isArray(data[key]) ? data[key] : []);
+  return new Promise(resolve => {
+    chrome.storage.local.get([key], data => {
+      resolve(data[key] || null);
     });
   });
 }
 
-export async function getAllRecentSubmissions(): Promise<
-  Record<string, SubmissionRecord[]>
+export async function getAllSubmissions(): Promise<
+  Record<string, SubmissionRecord>
 > {
   return new Promise((resolve) => {
-    chrome.storage.local.get(null, (items) => {
-      const out: Record<string, SubmissionRecord[]> = {};
+    chrome.storage.local.get(null, items => {
+      const out: Record<string, SubmissionRecord> = {};
       for (const [k, v] of Object.entries(items)) {
-        if (k.startsWith(PREFIX) && Array.isArray(v)) {
+        if (k.startsWith(PREFIX)) {
           const slug = k.slice(PREFIX.length);
-          out[slug] = v as SubmissionRecord[];
+          out[slug] = v as SubmissionRecord;
         }
       }
       resolve(out);

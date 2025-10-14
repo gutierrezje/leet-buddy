@@ -9,7 +9,7 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import { Message, HintPrompt, CurrentProblem } from '@/shared/types';
+import { Message, HintPrompt, CurrentProblem, SubmissionRecord } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
@@ -17,7 +17,7 @@ import ApiKeyError from './components/ApiKeyError';
 import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
-import { saveSubmission } from '@/shared/submissions';
+import { saveSubmission, getSubmission } from '@/shared/submissions';
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -91,11 +91,17 @@ export default function App() {
   const [resetTick, setResetTick] = useState(0);
   const [submissionSource, setSubmissionSource] = useState<'auto' | 'manual'>('manual');
   const [autoSubmissionId, setAutoSubmissionId] = useState<string | null>(null);
+  const [prevSubmission, setPrevSubmission] = useState<SubmissionRecord | null>(null);
 
   function handleStopwatchStop(elapsed: number) {
     setStoppedSec(elapsed);
     setSubmissionSource('manual');
+    setPrevSubmission(null);
     setSaveOpen(true);
+
+    if (currentProblem?.slug) {
+      getSubmission(currentProblem.slug).then(setPrevSubmission);
+    }
   }
 
   function handleCancelSave() {
@@ -104,6 +110,7 @@ export default function App() {
 
   function handleConfirmSave() {
     setSaveOpen(false);
+    setResetTick((t) => t + 1);
 
     const submissionId = submissionSource === 'auto'
       ? (autoSubmissionId || `auto-${Date.now()}`)
@@ -117,8 +124,7 @@ export default function App() {
       at: Date.now(),
     });
 
-    setSaveOpen(false);
-    setResetTick((t) => t + 1);
+    setPrevSubmission(null);
   }
 
   // Gets the API key from storage
@@ -181,33 +187,33 @@ export default function App() {
     });
   }, []);
 
-  // Subscribe to storage changes (if somehow miss timing on open)
-  useEffect(() => {
-    function onChanged(
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) {
-      if (area !== 'local' || !changes.currentProblem) return;
-      const cp = changes.currentProblem.newValue;
-      if (cp?.slug && cp?.title && lastSlugRef.current !== cp.slug) {
-        console.log(
-          `Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`
-        );
-        console.log(`Problem title: ${cp.title}`);
-        lastSlugRef.current = cp.slug;
-        const compact = mapTagsToCompact(cp.tags || []);
-        setCurrentProblem({
-          slug: cp.slug,
-          title: cp.title,
-          difficulty: cp.difficulty || '',
-          tags: compact,
-        });
-        setLoading(true);
-      }
-    }
-    chrome.storage.onChanged.addListener(onChanged);
-    return () => chrome.storage.onChanged.removeListener(onChanged);
-  }, []);
+  // // Subscribe to storage changes (if somehow miss timing on open)
+  // useEffect(() => {
+  //   function onChanged(
+  //     changes: Record<string, chrome.storage.StorageChange>,
+  //     area: string
+  //   ) {
+  //     if (area !== 'local' || !changes.currentProblem) return;
+  //     const cp = changes.currentProblem.newValue;
+  //     if (cp?.slug && cp?.title && lastSlugRef.current !== cp.slug) {
+  //       console.log(
+  //         `Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`
+  //       );
+  //       console.log(`Problem title: ${cp.title}`);
+  //       lastSlugRef.current = cp.slug;
+  //       const compact = mapTagsToCompact(cp.tags || []);
+  //       setCurrentProblem({
+  //         slug: cp.slug,
+  //         title: cp.title,
+  //         difficulty: cp.difficulty || '',
+  //         tags: compact,
+  //       });
+  //       setLoading(true);
+  //     }
+  //   }
+  //   chrome.storage.onChanged.addListener(onChanged);
+  //   return () => chrome.storage.onChanged.removeListener(onChanged);
+  // }, []);
 
   // Subscribe to messages from content script (when panel is already open)
   useEffect(() => {
@@ -220,6 +226,7 @@ export default function App() {
       submissionId?: string;
       at?: number;
     }) {
+      // Handle problem metadata updates
       if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
         const compact = mapTagsToCompact(msg.tags || []);
         console.log(`[LeetBuddy]: compact categories: ${compact}`);
@@ -254,11 +261,16 @@ export default function App() {
       if (msg.type === 'SUBMISSION_ACCEPTED' && msg.slug) {
         console.log(`[LeetBuddy] Auto-detected accepted submission for ${msg.slug}`);
 
-        chrome.storage.local.get(['currentProblem'], data => {
+        chrome.storage.local.get(['currentProblem'], async data => {
           const problem = data.currentProblem as CurrentProblem | null;
           if (!problem || problem.slug != msg.slug) {
             console.warn('[LeetBuddy] Warning: Current problem mismatch with the submission slug.');
             return;
+          }
+
+          const existing = await getSubmission(problem.slug);
+          if (existing?.submissionId === msg.submissionId) {
+            return; // already recorded
           }
 
           const endAt = msg.at || Date.now();
@@ -269,6 +281,7 @@ export default function App() {
           setStoppedSec(elapsedSec);
           setSubmissionSource('auto');
           setAutoSubmissionId(msg.submissionId || `auto-${endAt}`);
+          setPrevSubmission(existing);
           setSaveOpen(true);
         })
       }

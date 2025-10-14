@@ -41,11 +41,8 @@ function detectSubmissionResult() {
   if (status !== 'Accepted') return;
 
   const key = `${problemSlug}#${submissionId}`;
-  console.log('Detected accepted submission:', key);
-  console.log('Emitted submissions so far:', emittedSubmissionKeys);
   if (emittedSubmissionKeys.has(key)) return;
   emittedSubmissionKeys.add(key);
-  console.log('Emitting submission accepted event for key:', key);
 
   safeSend({
     type: 'SUBMISSION_ACCEPTED',
