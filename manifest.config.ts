@@ -3,8 +3,9 @@ import pkg from './package.json';
 
 export default defineManifest({
   manifest_version: 3,
-  name: pkg.name,
+  name: 'LeetBuddy',
   version: pkg.version,
+  description: 'AI-powered LeetCode interview prep assistant with guided problem-solving and progress tracking',
   icons: {
     48: 'public/logo.png',
   },
@@ -14,7 +15,7 @@ export default defineManifest({
     },
     default_popup: 'src/popup/index.html',
   },
-  permissions: ['sidePanel', 'contentSettings', 'storage'],
+  permissions: ['sidePanel', 'storage'],
   content_scripts: [
     {
       js: ['src/content/main.tsx'],
