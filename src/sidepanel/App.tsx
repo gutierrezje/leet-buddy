@@ -367,7 +367,10 @@ export default function App() {
       {/* Header */}
       <div className="flex flex-shrink-0 items-center p-4 border-b border-border ">
         <div className="flex flex-grow items-center">
-          <MessageSquareCode className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0" />
+          <MessageSquareCode 
+            className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={handleOpenOptions}
+          />
           <div className="flex items-start justify-between flex-col">
             <h1 className="text-lg font-semibold">LeetBuddy</h1>
             <span className="text-xs text-muted-foreground">

@@ -52,20 +52,17 @@ TODO
 - [x] markdown rendering in messages
 - [x] hint buttons for pattern & dsa
 - [x] handle user navigating to new problem without reopening
-- [ ] user problem solving history data
+- [x] user problem solving history data
   - [x] Use graphql to query for problem tags
   - [x] compact/map problem categories together
   - [x] implement some timing functionality
   - [] Review page to display user stats
+- [ ] voice input
 - [ ] support for other LLM models
-- [ ] persist chat history
 - [ ] handle case of user tokens running out
-- [ ] handle gating on premium problems if necessary
 - [ ] cross browser support
 
 Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
-
-- figure out review stats to track
-- review stats styling
+- 
