@@ -75,33 +75,30 @@ export default function SaveModal({
             Problem: {problem.title}
           </div>
           <div className="flex flex-row w-full justify-between">
-            {problem.difficulty && (
-              <div className="text-base mb-2">
-                Difficulty:{' '}
-                <div className="flex items-center gap-1">
-                  <div
-                    className={cn(
-                      'w-2 h-2 rounded-full',
-                      difficultyColorsBg[problem.difficulty]
-                    )}
-                  ></div>
-                  <span
-                    className={cn(
-                      'text-sm',
-                      difficultyColorsText[problem.difficulty]
-                    )}
-                  >
-                    {problem.difficulty}
-                  </span>
-                </div>
+            <div className="text-base mb-2">
+              Difficulty:{' '}
+              <div className="flex items-center gap-1">
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-full',
+                    difficultyColorsBg[problem.difficulty]
+                  )}
+                ></div>
+                <span
+                  className={cn(
+                    'text-sm',
+                    difficultyColorsText[problem.difficulty]
+                  )}
+                >
+                  {problem.difficulty}
+                </span>
               </div>
-            )}
+            </div>
+
             <div className="text-base mb-2">
               Previous Time:{' '}
               <div className="font-mono text-sm text-muted-foreground">
-                {previousTime
-                  ? `${formatHMS(previousTime)}`
-                  : 'N/A'}
+                {previousTime ? `${formatHMS(previousTime)}` : 'N/A'}
               </div>
             </div>
           </div>

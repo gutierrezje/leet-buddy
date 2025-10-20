@@ -1,46 +1,59 @@
-import { COMPACT_CATEGORIES } from '@/shared/categoryMap';
+import { COMPACT_TOPICS } from '@/shared/categoryMap';
 import { Card } from '@/components/ui/card';
-import { SubmissionRecord } from '@/shared/types/submitting';
+import { TopicStats } from '@/shared/types';
+import { formatHMS } from '@/shared/utils/time';
+import { cn } from '@/lib/utils';
 
-export type ProficiencyLevel =
-  | 'none'
-  | 'beginner'
-  | 'intermediate'
-  | 'advanced'
-  | 'expert';
-export type PatternProficiency = {
-  category: string;
-  problemCount: number;
-  avgTime: number;
-  totalTime: number;
-  score: number;
-  level: ProficiencyLevel;
+const difficultyColorsText: Record<string, string> = {
+  Easy: 'text-difficulty-easy',
+  Medium: 'text-difficulty-medium',
+  Hard: 'text-difficulty-hard',
 };
 
-const levelColors: Record<string, string> = {
-  none: 'bg-gray-100 text-gray-800',
-  beginner: 'bg-green-100 text-green-800',
-  intermediate: 'bg-blue-100 text-blue-800',
-  advanced: 'bg-purple-100 text-purple-800',
-  expert: 'bg-orange-100 text-orange-800',
+const difficultyColorsBg: Record<string, string> = {
+  Easy: 'bg-difficulty-easy',
+  Medium: 'bg-difficulty-medium',
+  Hard: 'bg-difficulty-hard',
 };
 
-export function computeProficiencyScore(
-  submissions: Record<string, SubmissionRecord[]>
-): PatternProficiency[] {
-  levelColors;
-  submissions;
-  return [{} as PatternProficiency]; // Placeholder
-}
+type TopicsViewProps = {
+  categoryStats: Record<string, TopicStats>;
+};
 
-export function TopicHeatmap() {
+export function TopicsView({ categoryStats }: TopicsViewProps) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      {COMPACT_CATEGORIES.map((cat) => (
-        <Card key={cat} className="p-4">
-          <div className="font-semibold mb-2">{cat}</div>
-        </Card>
-      ))}
+      {COMPACT_TOPICS.map((cat) => {
+        const stats = categoryStats[cat];
+        const hasData = stats && stats.totalProblems > 0;
+        return (
+          <Card
+            key={cat}
+            className={cn('p-4', hasData ? 'border-primary/50' : 'opacity-50')}
+          >
+            <div className={cn('font-semibold')}>{cat}</div>
+            {hasData && (
+              <div>
+                <div>{`Avg time: `}
+                  <span className="text-primary">{`${Math.floor(stats.avgTime / 60)}m`}</span>
+                </div>
+                <div className="flex flex-row items-center justify-start gap-2">
+                  Solved: 
+                  <span className="text-difficulty-easy ">
+                    {stats.difficulties.Easy}
+                  </span>
+                  <span className="text-difficulty-medium">
+                    {stats.difficulties.Medium}
+                  </span>
+                  <span className="text-difficulty-hard">
+                    {stats.difficulties.Hard}
+                  </span>
+                </div>
+              </div>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }

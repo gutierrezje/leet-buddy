@@ -110,7 +110,7 @@ export default function App() {
 
     if (currentProblem?.slug) {
       getSubmission(currentProblem.slug).then((rec) => {
-        setPrevTime(rec?.elapsedSec );
+        setPrevTime(rec?.elapsedSec);
       });
     }
   }
@@ -199,34 +199,6 @@ export default function App() {
     });
   }, []);
 
-  // // Subscribe to storage changes (if somehow miss timing on open)
-  // useEffect(() => {
-  //   function onChanged(
-  //     changes: Record<string, chrome.storage.StorageChange>,
-  //     area: string
-  //   ) {
-  //     if (area !== 'local' || !changes.currentProblem) return;
-  //     const cp = changes.currentProblem.newValue;
-  //     if (cp?.slug && cp?.title && lastSlugRef.current !== cp.slug) {
-  //       console.log(
-  //         `Detected new problem slug via storage change: ${lastSlugRef.current} -> ${cp.slug}`
-  //       );
-  //       console.log(`Problem title: ${cp.title}`);
-  //       lastSlugRef.current = cp.slug;
-  //       const compact = mapTagsToCompact(cp.tags || []);
-  //       setCurrentProblem({
-  //         slug: cp.slug,
-  //         title: cp.title,
-  //         difficulty: cp.difficulty || '',
-  //         tags: compact,
-  //       });
-  //       setLoading(true);
-  //     }
-  //   }
-  //   chrome.storage.onChanged.addListener(onChanged);
-  //   return () => chrome.storage.onChanged.removeListener(onChanged);
-  // }, []);
-
   // Subscribe to messages from content script (when panel is already open)
   useEffect(() => {
     function handleMessage(msg: {
@@ -249,7 +221,7 @@ export default function App() {
           setCurrentProblem({
             slug: msg.slug,
             title: msg.title || '',
-            difficulty: msg.difficulty || '',
+            difficulty: msg.difficulty || 'Unknown',
             tags: compact,
           });
         } else {
@@ -382,6 +354,7 @@ export default function App() {
     );
   }
 
+  // Handle missing API key
   const handleOpenOptions = () => {
     chrome.runtime.openOptionsPage();
   };

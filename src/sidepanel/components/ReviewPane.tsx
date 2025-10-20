@@ -1,12 +1,16 @@
 import { Card } from '@/components/ui/card';
-import { getAllSubmissions, clearSubmissions } from '@/shared/submissions';
-import { SubmissionRecord } from '@/shared/types';
+import { getAllSubmissions } from '@/shared/submissions';
+import { SubmissionRecord, TopicStats } from '@/shared/types';
 import { useEffect, useState } from 'react';
-import { TopicHeatmap } from './TopicHeatmap';
+import { TopicsView } from './TopicHeatmap';
+import { computeTopicStats } from '@/shared/utils/topicStats';
 
 export default function ReviewPane() {
   const [submissions, setSubmissions] = useState<
     Record<string, SubmissionRecord>
+  >({});
+  const [categoryStats, setCategoryStats] = useState<
+    Record<string, TopicStats>
   >({});
   const [loading, setLoading] = useState(false);
 
@@ -14,6 +18,8 @@ export default function ReviewPane() {
     // Initial load
     getAllSubmissions().then((data) => {
       setSubmissions(data);
+      const stats = computeTopicStats(Object.values(data));
+      setCategoryStats(stats);
       setLoading(false);
     });
 
@@ -28,8 +34,12 @@ export default function ReviewPane() {
       const touched = Object.keys(changes).filter((k) =>
         k.startsWith('submissions::')
       );
-      if (touched) {
-        getAllSubmissions().then(setSubmissions);
+      if (touched.length > 0) {
+        getAllSubmissions().then((data) => {
+          setSubmissions(data);
+          const stats = computeTopicStats(Object.values(data));
+          setCategoryStats(stats);
+        });
       }
     };
 
@@ -97,18 +107,7 @@ export default function ReviewPane() {
 
       <div>
         <div className="text-lg font-semibold">Topic Coverage: </div>
-        <TopicHeatmap />
-      </div>
-
-      <div>
-        <div className="text-lg font-semibold">Recently Completed:</div>
-        <ul className="list-disc list-inside">
-          {entries.slice(0, 10).map(([slug, rec]) => (
-            <li key={slug}>
-              {rec?.problem.title} ({rec?.problem.difficulty || 'Unknown'})
-            </li>
-          ))}
-        </ul>
+        <TopicsView categoryStats={categoryStats} />
       </div>
     </div>
   );

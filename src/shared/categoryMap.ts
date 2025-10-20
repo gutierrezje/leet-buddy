@@ -2,7 +2,7 @@
  * Compact categories:
  * Smaller / niche LeetCode tags are merged into logical umbrellas.
  */
-export const COMPACT_CATEGORIES = [
+export const COMPACT_TOPICS = [
   'Arrays & Hashing',
   'Two Pointers / Sliding Window',
   'Stack & Queue',
@@ -27,12 +27,12 @@ export const COMPACT_CATEGORIES = [
   'Other',
 ] as const;
 
-export type CompactCategory = (typeof COMPACT_CATEGORIES)[number];
+export type CompactTopics = (typeof COMPACT_TOPICS)[number];
 
 /**
  * Map raw LeetCode topic tag -> one or more compact categories.
  */
-const TAG_TO_COMPACT: Record<string, CompactCategory[]> = {
+const TAG_TO_COMPACT: Record<string, CompactTopics[]> = {
   // Arrays / hashing core
   Array: ['Arrays & Hashing'],
   'Hash Table': ['Arrays & Hashing'],
@@ -149,8 +149,8 @@ const TAG_TO_COMPACT: Record<string, CompactCategory[]> = {
  * Maps LeetCode tag names to compact categories set.
  * Unknown tags fall into 'Other'.
  */
-export function mapTagsToCompact(tagNames: string[]): CompactCategory[] {
-  const out = new Set<CompactCategory>();
+export function mapTagsToCompact(tagNames: string[]): CompactTopics[] {
+  const out = new Set<CompactTopics>();
   for (const raw of tagNames) {
     const cats = TAG_TO_COMPACT[raw];
     if (cats && cats.length) {
@@ -165,17 +165,17 @@ export function mapTagsToCompact(tagNames: string[]): CompactCategory[] {
 /**
  * Summarize counts by compact category.
  */
-export function aggregateCategoryCounts(
+export function aggregateTopicCounts(
   tagLists: string[][]
-): Record<CompactCategory, number> {
-  const counts: Record<CompactCategory, number> = Object.fromEntries(
-    COMPACT_CATEGORIES.map((c) => [c, 0])
-  ) as Record<CompactCategory, number>;
+): Record<CompactTopics, number> {
+  const counts: Record<CompactTopics, number> = Object.fromEntries(
+    COMPACT_TOPICS.map((c) => [c, 0])
+  ) as Record<CompactTopics, number>;
 
   for (const tags of tagLists) {
     for (const cat of tags) {
       if (cat in counts) {
-        counts[cat as CompactCategory] += 1;
+        counts[cat as CompactTopics] += 1;
       }
     }
   }

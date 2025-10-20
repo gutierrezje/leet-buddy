@@ -169,8 +169,8 @@ async function handleSlugChange() {
     slug,
     // Fallback (DOM or slug)
     title: domTitle() || slug,
-    difficulty: '',
-    tags: [],
+    difficulty: 'Unknown',
+    tags: ['Unknown'],
     startAt: Date.now(),
   };
 

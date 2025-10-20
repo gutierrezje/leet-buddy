@@ -69,5 +69,3 @@ up next:
 
 - figure out review stats to track
 - review stats styling
-- compare submission id's in storage to not have duplicate submissions
-- handle auto submit message in sidebar (affect: stopwatch, modal, etc)
