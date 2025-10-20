@@ -13,7 +13,6 @@ import {
   Message,
   HintPrompt,
   CurrentProblem,
-  SubmissionRecord,
 } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';

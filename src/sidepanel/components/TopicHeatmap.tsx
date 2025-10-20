@@ -1,20 +1,7 @@
 import { COMPACT_TOPICS } from '@/shared/categoryMap';
 import { Card } from '@/components/ui/card';
 import { TopicStats } from '@/shared/types';
-import { formatHMS } from '@/shared/utils/time';
 import { cn } from '@/lib/utils';
-
-const difficultyColorsText: Record<string, string> = {
-  Easy: 'text-difficulty-easy',
-  Medium: 'text-difficulty-medium',
-  Hard: 'text-difficulty-hard',
-};
-
-const difficultyColorsBg: Record<string, string> = {
-  Easy: 'bg-difficulty-easy',
-  Medium: 'bg-difficulty-medium',
-  Hard: 'bg-difficulty-hard',
-};
 
 type TopicsViewProps = {
   categoryStats: Record<string, TopicStats>;
