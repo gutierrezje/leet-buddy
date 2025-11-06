@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { AlertTriangle, Settings, ExternalLink } from 'lucide-react';
 
 interface ApiKeyErrorProps {
   onOpenOptions: () => void;
@@ -18,6 +18,20 @@ export default function ApiKeyError({ onOpenOptions }: ApiKeyErrorProps) {
         To start using LeetBuddy, please set up your Google AI Studio API key in
         the extension configurations page.
       </p>
+      <div className="mb-6 p-4 bg-muted rounded-lg text-left">
+        <p className="text-xs text-muted-foreground mb-2">
+          Don't have an API key yet?
+        </p>
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 hover:underline"
+        >
+          Get your free API key from Google AI Studio
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
       <Button onClick={onOpenOptions}>
         <Settings className="mr-2 h-4 w-4" />
         Open Configuration

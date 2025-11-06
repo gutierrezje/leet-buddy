@@ -345,21 +345,21 @@ export default function App() {
     }
   };
 
-  if (loading && messages.length <= 1) {
-    return (
-      <div className="flex items-center justify-center h-full m-4">
-        Loading...
-      </div>
-    );
-  }
-
-  // Handle missing API key
+  // Handle missing API key FIRST (before loading state check)
   const handleOpenOptions = () => {
     chrome.runtime.openOptionsPage();
   };
 
   if (!apiKey || apiKey === '') {
     return <ApiKeyError onOpenOptions={handleOpenOptions} />;
+  }
+
+  if (loading && messages.length <= 1) {
+    return (
+      <div className="flex items-center justify-center h-full m-4">
+        Loading...
+      </div>
+    );
   }
 
   return (

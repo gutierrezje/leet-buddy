@@ -2,6 +2,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import { Message, HintPrompt } from '@/shared/types';
 
@@ -22,12 +23,20 @@ export default function ChatPane({
   onChangeInput,
   onSend,
 }: Props) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 p-4 py-0 mt-2 overflow-hidden">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
+        <div ref={messagesEndRef} />
       </ScrollArea>
 
       <div className="flex-shrink-0 px-4 py-2 border-t border-border">
