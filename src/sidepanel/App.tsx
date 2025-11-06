@@ -137,8 +137,9 @@ export default function App() {
     });
   }
 
-  // Gets the API key from storage
+  // Gets the API key from storage and listen for changes
   useEffect(() => {
+    // Initial load
     chrome.storage.local.get('apiKey', (data) => {
       if (data.apiKey) {
         setApiKey(data.apiKey);
@@ -147,6 +148,25 @@ export default function App() {
         setLoading(false);
       }
     });
+
+    // Listen for storage changes
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string
+    ) => {
+      if (area === 'local' && changes.apiKey) {
+        debug('API key changed in storage');
+        if (changes.apiKey.newValue) {
+          setApiKey(changes.apiKey.newValue);
+        } else {
+          setApiKey('');
+          setLoading(false);
+        }
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
   // Initialize the AI chat session once the key is available
