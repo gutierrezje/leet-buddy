@@ -1,4 +1,8 @@
-console.log('background service worker loaded');
+import { createLogger } from '@/shared/utils/debug';
+
+const debug = createLogger('background');
+
+debug('background service worker loaded');
 
 function getApiKey(): Promise<string | null> {
   return new Promise((resolve) => {
@@ -23,7 +27,7 @@ async function validateApiKey(apiKey: string): Promise<boolean> {
     const response = await fetch(url);
     return response.ok;
   } catch (error) {
-    console.error('Error validating API key:', error);
+    debug('Error validating API key: %O', error);
     return false;
   }
 }
@@ -32,22 +36,22 @@ async function checkAndStoreApiKeyStatus() {
   const apiKey = await getApiKey();
 
   if (!apiKey) {
-    console.log('No API key found');
+    debug('No API key found');
     await chrome.storage.local.set({ apiKeyStatus: false });
     return;
   }
 
-  console.log('Validating API key...');
+  debug('Validating API key...');
   const isValid = await validateApiKey(apiKey);
 
   await chrome.storage.local.set({ apiKeyStatus: isValid });
-  console.log('API key validation status:', isValid);
+  debug('API key validation status: %s', isValid);
 }
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
   // Check if apiKey was the item that changed.
   if (namespace === 'local' && changes.apiKey) {
-    console.log('API key has changed. Re-validating...');
+    debug('API key has changed. Re-validating...');
     checkAndStoreApiKeyStatus();
   }
 });

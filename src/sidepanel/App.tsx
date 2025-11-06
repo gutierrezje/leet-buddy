@@ -9,11 +9,7 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import {
-  Message,
-  HintPrompt,
-  CurrentProblem,
-} from '@/shared/types';
+import { Message, HintPrompt, CurrentProblem } from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
@@ -22,6 +18,9 @@ import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
 import { saveSubmission, getSubmission } from '@/shared/submissions';
+import { createLogger } from '@/shared/utils/debug';
+
+const debug = createLogger('sidepanel');
 
 const systemPrompt = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
@@ -144,7 +143,7 @@ export default function App() {
       if (data.apiKey) {
         setApiKey(data.apiKey);
       } else {
-        console.error('API key not found');
+        debug('API key not found');
         setLoading(false);
       }
     });
@@ -154,7 +153,7 @@ export default function App() {
   useEffect(() => {
     if (!apiKey || !currentProblem?.title) return;
     const title = currentProblem.title;
-    console.log(`Initializing new chat session for problem: ${title}`);
+    debug('Initializing new chat session for problem: %s', title);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -182,7 +181,7 @@ export default function App() {
       if (cp?.slug && cp?.title) {
         const compact = mapTagsToCompact(cp.tags || []);
         if (lastSlugRef.current !== cp.slug) {
-          console.log(`Bootstrapped problem slug from storage: ${cp.slug}`);
+          debug('Bootstrapped problem slug from storage: %s', cp.slug);
           setCurrentProblem({
             slug: cp.slug,
             title: cp.title,
@@ -212,7 +211,7 @@ export default function App() {
       // Handle problem metadata updates
       if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
         const compact = mapTagsToCompact(msg.tags || []);
-        console.log(`[LeetBuddy]: compact categories: ${compact}`);
+        debug('compact categories: %O', compact);
         if (lastSlugRef.current !== msg.slug) {
           lastSlugRef.current = msg.slug;
           setMessages(initialMessages as Message[]);
@@ -242,16 +241,12 @@ export default function App() {
 
       // Handle accepted submissions
       if (msg.type === 'SUBMISSION_ACCEPTED' && msg.slug) {
-        console.log(
-          `[LeetBuddy] Auto-detected accepted submission for ${msg.slug}`
-        );
+        debug('Auto-detected accepted submission for %s', msg.slug);
 
         chrome.storage.local.get(['currentProblem'], async (data) => {
           const problem = data.currentProblem as CurrentProblem | null;
           if (!problem || problem.slug != msg.slug) {
-            console.warn(
-              '[LeetBuddy] Warning: Current problem mismatch with the submission slug.'
-            );
+            debug('Current problem mismatch with the submission slug.');
             return;
           }
 
@@ -330,7 +325,7 @@ export default function App() {
         prev.map((msg) => (msg.id === aiPlaceholder.id ? aiMessage : msg))
       );
     } catch (error) {
-      console.error('Error sending message to AI:', error);
+      debug('Error sending message to AI: %O', error);
       const errorMessage: Message = {
         ...aiPlaceholder,
         text: 'Sorry, I encountered an error. Please check your API key or network connection and try again.',
@@ -367,8 +362,8 @@ export default function App() {
       {/* Header */}
       <div className="flex flex-shrink-0 items-center p-4 border-b border-border ">
         <div className="flex flex-grow items-center">
-          <MessageSquareCode 
-            className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+          <MessageSquareCode
+            className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleOpenOptions}
           />
           <div className="flex items-start justify-between flex-col">

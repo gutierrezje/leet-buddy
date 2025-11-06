@@ -2,8 +2,11 @@ import { SubmissionStatus, PathInfo, CurrentProblem } from '@/shared/types';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import SidebarLauncher from './views/SidebarLauncher';
+import { createLogger } from '@/shared/utils/debug';
 
-console.log('[LeetBuddy] Content script loaded');
+const debug = createLogger('content');
+
+debug('Content script loaded');
 
 function domTitle(): string {
   return (document.title || '').replace(/\s+-\s+LeetCode\s*$/i, '').trim();
@@ -66,11 +69,13 @@ const cache: Record<string, CurrentProblem> = {};
 let currentSlug: string | null = null;
 let inFlightAbort: AbortController | null = null;
 
-function safeSend(msg: any) {
+function safeSend(msg: unknown) {
   try {
     if (!chrome?.runtime?.id) return;
     chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError);
-  } catch {}
+  } catch (e) {
+    debug('Failed to send message: %O', e);
+  }
 }
 
 function persistCurrentProblem(problem: CurrentProblem) {
@@ -118,17 +123,18 @@ async function fetchMeta(
     });
     if (!res.ok) return null;
     const json = await res.json();
-    const q = json?.data?.question;
+    const q = json?.data?.question as Record<string, unknown> | undefined;
     if (!q) return null;
+    const topicTags = q.topicTags as Array<{ name: string }>;
     return {
       slug,
-      title: q.title,
-      difficulty: q.difficulty,
-      tags: q.topicTags.map((t: any) => t.name),
+      title: q.title as string,
+      difficulty: q.difficulty as string,
+      tags: topicTags.map((t) => t.name),
     };
   } catch (e) {
-    if ((e as any).name !== 'AbortError') {
-      console.warn('[LeetBuddy] fetch failed', e);
+    if ((e as { name?: string }).name !== 'AbortError') {
+      debug('Fetch failed: %O', e);
     }
     return null;
   }

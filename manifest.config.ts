@@ -5,7 +5,8 @@ export default defineManifest({
   manifest_version: 3,
   name: 'LeetBuddy',
   version: pkg.version,
-  description: 'AI-powered LeetCode interview prep assistant with guided problem-solving and progress tracking',
+  description:
+    'AI-powered LeetCode interview prep assistant with guided problem-solving and progress tracking',
   icons: {
     48: 'public/logo.png',
   },

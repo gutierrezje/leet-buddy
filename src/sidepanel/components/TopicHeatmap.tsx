@@ -21,11 +21,12 @@ export function TopicsView({ categoryStats }: TopicsViewProps) {
             <div className={cn('font-semibold')}>{cat}</div>
             {hasData && (
               <div>
-                <div>{`Avg time: `}
+                <div>
+                  {`Avg time: `}
                   <span className="text-primary">{`${Math.floor(stats.avgTime / 60)}m`}</span>
                 </div>
                 <div className="flex flex-row items-center justify-start gap-2">
-                  Solved: 
+                  Solved:
                   <span className="text-difficulty-easy ">
                     {stats.difficulties.Easy}
                   </span>

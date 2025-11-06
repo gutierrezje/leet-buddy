@@ -4,6 +4,9 @@ import { SubmissionRecord, TopicStats } from '@/shared/types';
 import { useEffect, useState } from 'react';
 import { TopicsView } from './TopicHeatmap';
 import { computeTopicStats } from '@/shared/utils/topicStats';
+import { createLogger } from '@/shared/utils/debug';
+
+const debug = createLogger('review-pane');
 
 export default function ReviewPane() {
   const [submissions, setSubmissions] = useState<
@@ -53,7 +56,7 @@ export default function ReviewPane() {
 
   const entries = Object.entries(submissions);
 
-  console.log('ReviewPane entries:', entries);
+  debug('ReviewPane entries: %O', entries);
 
   if (entries.length === 0) {
     return (
