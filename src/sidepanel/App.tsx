@@ -14,6 +14,7 @@ import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
 import ApiKeyError from './components/ApiKeyError';
+import EmptyState from './components/EmptyState';
 import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
@@ -212,7 +213,8 @@ export default function App() {
           setLoading(true);
         }
       } else {
-        setLoading(true);
+        // No problem in storage, show empty state
+        setLoading(false);
       }
     });
   }, []);
@@ -236,6 +238,7 @@ export default function App() {
           lastSlugRef.current = msg.slug;
           setMessages(initialMessages as Message[]);
           setChatSession(null); // triggers re-init
+          setLoading(true); // Set loading state for new problem
           setCurrentProblem({
             slug: msg.slug,
             title: msg.title || '',
@@ -369,6 +372,11 @@ export default function App() {
     return <ApiKeyError onOpenOptions={handleOpenOptions} />;
   }
 
+  // Show empty state if no problem is detected and not loading
+  if (!currentProblem?.title && !loading) {
+    return <EmptyState />;
+  }
+
   if (loading && messages.length <= 1) {
     return (
       <div className="flex items-center justify-center h-full m-4">
@@ -413,14 +421,16 @@ export default function App() {
         )}
       </div>
 
-      <SaveModal
-        open={saveOpen}
-        onConfirm={handleConfirmSave}
-        onCancel={handleCancelSave}
-        problem={currentProblem!}
-        elapsedSec={stoppedSec}
-        previousTime={prevTime}
-      />
+      {currentProblem && (
+        <SaveModal
+          open={saveOpen}
+          onConfirm={handleConfirmSave}
+          onCancel={handleCancelSave}
+          problem={currentProblem}
+          elapsedSec={stoppedSec}
+          previousTime={prevTime}
+        />
+      )}
     </div>
   );
 }
