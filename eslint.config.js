@@ -1,8 +1,11 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-plugin-prettier/recommended';
 
-export default tseslint.config(
+export default [
   {
     ignores: [
       'dist',
@@ -14,15 +17,15 @@ export default tseslint.config(
       'vite.config.ts',
       'tailwind.config.js',
       'manifest.config.ts',
+      '.storybook',
+      'storybook-static',
     ],
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  prettier,
   {
-    files: ['src/**/*.{js,mjs,cjs,ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommended,
-      prettier,
-    ],
+    files: ['src/**/*.{js,mjs,cjs,ts,tsx}', 'src/test/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       sourceType: 'module',
@@ -40,5 +43,6 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       'prettier/prettier': 'warn',
     },
-  }
-);
+  },
+  ...storybook.configs["flat/recommended"],
+];

@@ -57,6 +57,7 @@ TODO
   - [x] compact/map problem categories together
   - [x] implement some timing functionality
   - [] Review page to display user stats
+- [x] testing with vitest and storybook
 - [ ] voice input
 - [ ] support for other LLM models
 - [ ] handle case of user tokens running out
@@ -66,4 +67,3 @@ Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
 
-- [] improve "loading" screen with hints (navigate to problem, etc)

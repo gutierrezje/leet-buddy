@@ -30,7 +30,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             ) : isUser ? (
               <p className="whitespace-pre-wrap">{message.text}</p>
             ) : (
-              <div className="prose prose-sm dark:prose-invert prose-p:my-0 prose-ul:my-0 prose-li:my-0">
+              <div className="prose prose-sm dark:prose-invert prose-p:my-0 prose-ul:my-0 prose-li:my-0 prose-pre:overflow-x-auto prose-pre:max-w-full prose-code:break-words">
                 <ReactMarkdown>{message.text}</ReactMarkdown>
               </div>
             )}
