@@ -12,15 +12,16 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
   return (
     <div className={cn('flex my-1', isUser ? 'justify-end' : 'justify-start')}>
-      <div className={cn('max-w-xs md:max-w-sm', isUser ? 'order-first' : '')}>
+      <div className={cn('max-w-xs md:max-w-sm min-w-0', isUser ? 'order-first' : '')}>
         <Card
           className={cn(
+            'overflow-hidden',
             isUser
               ? 'bg-primary text-primary-foreground'
               : 'bg-accent text-accent-foreground'
           )}
         >
-          <CardContent className="px-4 text-sm leading-relaxed">
+          <CardContent className="px-4 text-sm leading-relaxed overflow-x-auto">
             {message.isLoading ? (
               <div className="flex items-center justify-center space-x-1">
                 <div className="h-1 w-1 bg-current rounded-full animate-bounce [animation-delay:-300ms]" />
@@ -28,9 +29,9 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 <div className="h-1 w-1 bg-current rounded-full animate-bounce" />
               </div>
             ) : isUser ? (
-              <p className="whitespace-pre-wrap">{message.text}</p>
+              <p className="whitespace-pre-wrap break-words">{message.text}</p>
             ) : (
-              <div className="prose prose-sm dark:prose-invert prose-p:my-0 prose-ul:my-0 prose-li:my-0 prose-pre:overflow-x-auto prose-pre:max-w-full prose-code:break-words">
+              <div className="prose prose-sm dark:prose-invert prose-p:my-0 prose-ul:my-0 prose-li:my-0 prose-pre:overflow-x-auto prose-pre:max-w-full prose-code:break-all">
                 <ReactMarkdown>{message.text}</ReactMarkdown>
               </div>
             )}

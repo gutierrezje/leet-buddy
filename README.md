@@ -60,10 +60,17 @@ TODO
 - [x] testing with vitest and storybook
 - [ ] voice input
 - [ ] support for other LLM models
-- [ ] handle case of user tokens running out
 - [ ] cross browser support
+- [ ] add ability for text box to grow vert
+- [ ] only nav to bottom on user input, maybe push slightly up on ai input
+- [ ] handle multiline input properly
+- [ ] create a more user friendly response when hitting rate limits
+- [ ] 
 
 Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
-
+- [ ] after submit reset internal timer?
+- [ ] fix list rendering
+- [ ] optimize token usage from hint buttons
+- 
