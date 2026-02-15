@@ -13,8 +13,8 @@ const dirname =
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
+    // Shared base configuration (inherited by both projects)
     globals: true,
-    environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
     coverage: {
@@ -26,9 +26,25 @@ export default defineConfig({
         '**/*.config.*',
         '**/dist/**',
         '**/*.d.ts',
+        '**/*.stories.tsx', // Exclude stories from coverage
+        '**/*.stories.ts',
+        '**/*.stories.jsx',
+        '**/*.stories.js',
       ],
     },
+    // Define projects array inside test object
     projects: [
+      // Project 1: Unit Tests
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'happy-dom',
+          include: ['**/*.test.ts', '**/*.test.tsx'],
+          exclude: ['**/*.stories.tsx', '**/*.stories.ts', 'node_modules/**'],
+        },
+      },
+      // Project 2: Storybook Tests
       {
         extends: true,
         plugins: [

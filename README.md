@@ -7,13 +7,13 @@ An extension that allows you to have a convenient way to practice your technical
 1. Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 2. Start development server:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 3. Open Chrome and navigate to `chrome://extensions/`, enable "Developer mode", and load the unpacked extension from the `dist` directory.
@@ -21,7 +21,7 @@ npm run dev
 4. Build for production:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## Project Structure
@@ -29,6 +29,49 @@ npm run build
 - `src/popup/` - Extension popup UI
 - `src/content/` - Content scripts
 - `manifest.config.ts` - Chrome extension manifest configuration
+
+## Testing
+
+This project uses Vitest for unit tests and Storybook for component testing.
+
+### Running Tests
+
+```bash
+# Run unit tests in watch mode (default)
+pnpm test
+
+# Run unit tests once
+pnpm test:unit
+
+# Run Storybook component tests
+pnpm test:stories
+
+# Run all tests (unit + storybook)
+pnpm test:run
+
+# Run unit tests with coverage
+pnpm test:coverage
+
+# Open Vitest UI
+pnpm test:ui
+```
+
+### Test Structure
+
+- **Unit Tests**: `**/*.test.ts(x)` - Fast unit tests using happy-dom
+- **Storybook Tests**: `**/*.stories.ts(x)` - Browser-based component tests
+
+### Writing Tests
+
+See `/src/test/README.md` for detailed testing guidelines and examples.
+
+### Continuous Integration
+
+All tests run automatically on pull requests via GitHub Actions:
+- Linting
+- Build verification
+- Unit tests with coverage
+- Storybook component tests
 
 ## Documentation
 

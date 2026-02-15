@@ -5,16 +5,22 @@ This project uses [Vitest](https://vitest.dev/) and [React Testing Library](http
 ## Running Tests
 
 ```bash
-# Run tests in watch mode (recommended during development)
+# Run unit tests in watch mode (recommended during development)
 pnpm test
 
-# Run tests once
+# Run unit tests once
+pnpm test:unit
+
+# Run Storybook component tests
+pnpm test:stories
+
+# Run all tests (unit + storybook)
 pnpm test:run
 
 # Run tests with UI
 pnpm test:ui
 
-# Run tests with coverage report
+# Run unit tests with coverage report
 pnpm test:coverage
 ```
 
@@ -100,7 +106,5 @@ Use `@testing-library/user-event` for simulating user interactions:
 
 ## Example Tests
 
-See the following files for examples:
+See the following file for examples:
 - [ChatMessage.test.tsx](../sidepanel/components/ChatMessage.test.tsx)
-- [EmptyState.test.tsx](../sidepanel/components/EmptyState.test.tsx)
-- [ApiKeyError.test.tsx](../sidepanel/components/ApiKeyError.test.tsx)
