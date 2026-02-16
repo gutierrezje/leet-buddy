@@ -25,7 +25,10 @@ import EmptyState from './components/EmptyState';
 import Stopwatch from './components/Stopwatch';
 import SaveModal from './components/SaveModal';
 import { mapTagsToCompact } from '@/shared/categoryMap';
-import { saveSubmission, getSubmission } from '@/shared/submissions';
+import {
+  appendSubmissionAttempt,
+  getLatestSubmission,
+} from '@/shared/submissions';
 import { createLogger } from '@/shared/utils/debug';
 
 const debug = createLogger('sidepanel');
@@ -115,7 +118,7 @@ export default function App() {
     setSaveOpen(true);
 
     if (currentProblem?.slug) {
-      getSubmission(currentProblem.slug).then((rec) => {
+      getLatestSubmission(currentProblem.slug).then((rec) => {
         setPrevTime(rec?.elapsedSec);
       });
     }
@@ -136,7 +139,7 @@ export default function App() {
         ? autoSubmissionId || `auto-${now}`
         : `manual-${now}`;
 
-    saveSubmission(currentProblem!.slug, {
+    appendSubmissionAttempt(currentProblem!.slug, {
       submissionId,
       source: submissionSource,
       elapsedSec: finalElapsedSec,
@@ -289,7 +292,7 @@ export default function App() {
             return;
           }
 
-          const existing = await getSubmission(problem.slug);
+          const existing = await getLatestSubmission(problem.slug);
           if (existing?.submissionId === msg.submissionId) {
             return; // already recorded
           }
