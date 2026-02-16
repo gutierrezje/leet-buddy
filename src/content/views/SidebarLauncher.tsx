@@ -1,6 +1,6 @@
 import './App.css';
-import { Button } from '@/components/ui/button';
 import { MessageSquareCode } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function SidebarLauncher() {
   const handleOpenPanel = () => {

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import {
-  CurrentProblem,
-  isProblemMetadataMessage,
-  isProblemClearedMessage,
-} from '@/shared/types';
+import { useEffect, useRef, useState } from 'react';
 import { mapTagsToCompact } from '@/shared/categoryMap';
+import {
+  type CurrentProblem,
+  isProblemClearedMessage,
+  isProblemMetadataMessage,
+} from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 
 const debug = createLogger('useProblemContext');

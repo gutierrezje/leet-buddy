@@ -1,10 +1,10 @@
-import { getAllSubmissions } from '@/shared/submissions';
-import { SubmissionRecord, TopicStats } from '@/shared/types';
 import { useEffect, useState } from 'react';
-import { TopicsView } from './TopicHeatmap';
-import { computeTopicStats } from '@/shared/utils/topicStats';
-import { createLogger } from '@/shared/utils/debug';
 import { cn } from '@/lib/utils';
+import { getAllSubmissions } from '@/shared/submissions';
+import type { SubmissionRecord, TopicStats } from '@/shared/types';
+import { createLogger } from '@/shared/utils/debug';
+import { computeTopicStats } from '@/shared/utils/topicStats';
+import { TopicsView } from './TopicHeatmap';
 
 const debug = createLogger('review-pane');
 

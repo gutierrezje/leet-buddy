@@ -1,4 +1,4 @@
-import { SubmissionRecord } from '@/shared/types';
+import type { SubmissionRecord } from '@/shared/types';
 
 const PREFIX = 'submissions::';
 const SCHEMA_VERSION_KEY = 'submissions_schema_version';

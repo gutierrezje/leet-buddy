@@ -2,14 +2,14 @@
  * Integration tests for App.tsx message handling.
  * Tests the actual sidepanel behavior for Phase 2 messaging protocol.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@/test/test-utils';
-import App from './App';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  ProblemClearedMessage,
   ProblemMetadataMessage,
   SubmissionAcceptedMessage,
-  ProblemClearedMessage,
 } from '@/shared/types';
+import { act, render, screen, waitFor } from '@/test/test-utils';
+import App from './App';
 
 describe('App Message Handling', () => {
   let messageListeners: Array<(msg: unknown) => void> = [];
@@ -36,11 +36,11 @@ describe('App Message Handling', () => {
 
     // Mock chrome.storage.local
     mockStorage = {
-      get: vi.fn((keys, callback) => {
+      get: vi.fn((_keys, callback) => {
         // Return empty by default
         callback({});
       }),
-      set: vi.fn((items, callback) => {
+      set: vi.fn((_items, callback) => {
         if (callback) callback();
       }),
     };
@@ -62,7 +62,7 @@ describe('App Message Handling', () => {
         sendMessage: vi.fn(),
         id: 'test-extension-id',
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: Partial Chrome API mock for testing
     } as any;
   });
 
@@ -73,7 +73,9 @@ describe('App Message Handling', () => {
 
   const simulateMessage = async (msg: unknown) => {
     await act(async () => {
-      messageListeners.forEach((listener) => listener(msg));
+      for (const listener of messageListeners) {
+        listener(msg);
+      }
       // Allow React to process state updates
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -82,7 +84,7 @@ describe('App Message Handling', () => {
   describe('PROBLEM_METADATA handling', () => {
     it('updates currentProblem on receiving metadata for new problem', async () => {
       // Setup: API key in storage
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({ apiKey: 'test-api-key' });
       });
 
@@ -111,7 +113,7 @@ describe('App Message Handling', () => {
     });
 
     it('updates metadata for same problem without resetting chat', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({
           apiKey: 'test-api-key',
           currentProblem: {
@@ -152,7 +154,7 @@ describe('App Message Handling', () => {
     });
 
     it('resets chat when navigating to different problem', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({
           apiKey: 'test-api-key',
           currentProblem: {
@@ -196,7 +198,7 @@ describe('App Message Handling', () => {
   describe('PROBLEM_CLEARED handling', () => {
     it('clears currentProblem and shows empty state', async () => {
       // Start with a problem loaded
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({
           apiKey: 'test-api-key',
           currentProblem: {
@@ -234,7 +236,7 @@ describe('App Message Handling', () => {
     });
 
     it('resets chat session on PROBLEM_CLEARED', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({
           apiKey: 'test-api-key',
           currentProblem: {
@@ -358,7 +360,7 @@ describe('App Message Handling', () => {
 
   describe('Message handling edge cases', () => {
     it('ignores malformed messages', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({ apiKey: 'test-api-key' });
       });
 
@@ -380,7 +382,7 @@ describe('App Message Handling', () => {
     });
 
     it('handles rapid message sequence correctly', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({ apiKey: 'test-api-key' });
       });
 
@@ -424,7 +426,7 @@ describe('App Message Handling', () => {
     });
 
     it('handles problem -> non-problem -> same problem re-entry', async () => {
-      mockStorage.get.mockImplementation((keys, callback) => {
+      mockStorage.get.mockImplementation((_keys, callback) => {
         callback({ apiKey: 'test-api-key' });
       });
 

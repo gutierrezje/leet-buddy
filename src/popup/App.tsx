@@ -1,5 +1,5 @@
+import { PanelRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Settings, PanelRight } from 'lucide-react';
 
 export default function App() {
   const handleOpenOptions = () => {
@@ -21,7 +21,9 @@ export default function App() {
     <div className="w-72 bg-background p-4">
       <div className="flex items-center gap-2.5 mb-4">
         <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/15 shrink-0">
-          <span className="text-primary font-semibold text-sm font-mono">LB</span>
+          <span className="text-primary font-semibold text-sm font-mono">
+            LB
+          </span>
         </div>
         <div>
           <h1 className="text-sm font-semibold tracking-tight">LeetBuddy</h1>

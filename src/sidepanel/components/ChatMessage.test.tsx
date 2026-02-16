@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { Message } from '@/shared/types';
 import { render, screen } from '@/test/test-utils';
 import ChatMessage from './ChatMessage';
-import { Message } from '@/shared/types';
 
 describe('ChatMessage', () => {
   describe('User Messages', () => {

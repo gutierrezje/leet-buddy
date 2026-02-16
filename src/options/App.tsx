@@ -1,7 +1,13 @@
-import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
-import { Save, CheckCircle, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  AlertCircle,
+  CheckCircle,
+  ExternalLink,
+  Save,
+  Trash2,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { GEMINI_MODEL } from '@/sidepanel/config';
 
 export default function App() {
@@ -44,7 +50,7 @@ export default function App() {
           setShowSavedMessage(false);
         }, 2000);
       });
-    } catch (error) {
+    } catch {
       setValidating(false);
       setValidationError(
         'Invalid API key. Please check your key and try again.'
@@ -70,9 +76,7 @@ export default function App() {
                 LB
               </span>
             </div>
-            <h1 className="text-lg font-semibold tracking-tight">
-              LeetBuddy
-            </h1>
+            <h1 className="text-lg font-semibold tracking-tight">LeetBuddy</h1>
           </div>
           <p className="text-sm text-muted-foreground">Configuration</p>
         </div>

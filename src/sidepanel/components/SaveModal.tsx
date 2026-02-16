@@ -1,3 +1,6 @@
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -6,13 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-
-import { CurrentProblem } from '@/shared/types';
-import { formatHMS } from '@/shared/utils/time';
 import { cn } from '@/lib/utils';
+import type { CurrentProblem } from '@/shared/types';
+import { formatHMS } from '@/shared/utils/time';
 
 function TimeWheel({
   value,
@@ -164,15 +163,29 @@ export default function SaveModal({
 
           {/* Time Picker */}
           <div className="flex flex-col items-center">
-            <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-2 self-start">
+            <div className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-2 self-start">
               Time
-            </label>
+            </div>
             <div className="flex items-start gap-2">
               <TimeWheel value={hours} onChange={setHours} label="hrs" />
-              <span className="text-muted-foreground text-lg font-mono mt-3">:</span>
-              <TimeWheel value={minutes} onChange={setMinutes} max={59} label="min" />
-              <span className="text-muted-foreground text-lg font-mono mt-3">:</span>
-              <TimeWheel value={seconds} onChange={setSeconds} max={59} label="sec" />
+              <span className="text-muted-foreground text-lg font-mono mt-3">
+                :
+              </span>
+              <TimeWheel
+                value={minutes}
+                onChange={setMinutes}
+                max={59}
+                label="min"
+              />
+              <span className="text-muted-foreground text-lg font-mono mt-3">
+                :
+              </span>
+              <TimeWheel
+                value={seconds}
+                onChange={setSeconds}
+                max={59}
+                label="sec"
+              />
             </div>
           </div>
         </div>
@@ -180,13 +193,18 @@ export default function SaveModal({
         <DialogFooter>
           <div className="flex items-center gap-2 w-full">
             <Button
+              type="button"
               variant="ghost"
               onClick={onCancel}
               className="flex-1 text-xs"
             >
               Cancel
             </Button>
-            <Button onClick={handleConfirm} className="flex-1 text-xs">
+            <Button
+              type="button"
+              onClick={handleConfirm}
+              className="flex-1 text-xs"
+            >
               Save
             </Button>
           </div>

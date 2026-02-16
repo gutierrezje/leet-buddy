@@ -1,9 +1,9 @@
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { HintPrompt, Message } from '@/shared/types';
 import ChatMessage from './ChatMessage';
-import { Message, HintPrompt } from '@/shared/types';
 
 type Props = {
   messages: Message[];
@@ -27,7 +27,7 @@ export default function ChatPane({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, []);
 
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
@@ -56,6 +56,7 @@ export default function ChatPane({
             return (
               <button
                 key={hint.id}
+                type="button"
                 disabled={loading}
                 onClick={() => onSend(hint.messageText, hint.displayText)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-secondary-foreground bg-secondary hover:bg-secondary/80 hover:text-foreground border border-border/50 hover:border-border transition-all disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"

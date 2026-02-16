@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef, useReducer } from 'react';
-import { CurrentProblem, isSubmissionAcceptedMessage } from '@/shared/types';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import {
   appendSubmissionAttempt,
   getLatestSubmission,
 } from '@/shared/submissions';
+import {
+  type CurrentProblem,
+  isSubmissionAcceptedMessage,
+} from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 
 const debug = createLogger('useSubmissionFlow');

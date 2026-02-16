@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  isProblemClearedMessage,
   isProblemMetadataMessage,
   isSubmissionAcceptedMessage,
-  isProblemClearedMessage,
+  type ProblemClearedMessage,
   type ProblemMetadataMessage,
   type SubmissionAcceptedMessage,
-  type ProblemClearedMessage,
 } from './messaging';
 
 describe('Runtime Message Type Guards', () => {

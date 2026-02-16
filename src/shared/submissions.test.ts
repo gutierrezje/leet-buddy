@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   appendSubmissionAttempt,
-  getSubmissionHistory,
-  getLatestSubmission,
+  clearSubmissions,
   getAllSubmissionHistories,
   getAllSubmissions,
+  getLatestSubmission,
   getSubmission,
+  getSubmissionHistory,
   saveSubmission,
-  clearSubmissions,
 } from './submissions';
-import { SubmissionRecord } from './types';
+import type { SubmissionRecord } from './types';
 
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};
@@ -114,7 +114,9 @@ describe('Submissions Storage v2', () => {
 
   beforeEach(() => {
     // Clear mock storage before each test
-    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    for (const key of Object.keys(mockStorage)) {
+      delete mockStorage[key];
+    }
     vi.clearAllMocks();
   });
 
@@ -145,7 +147,7 @@ describe('Submissions Storage v2', () => {
       const rec = createSubmissionRecord('sub-1', 300);
       await appendSubmissionAttempt('two-sum', rec);
 
-      expect(mockStorage['submissions_schema_version']).toBe(2);
+      expect(mockStorage.submissions_schema_version).toBe(2);
     });
   });
 
@@ -508,7 +510,7 @@ describe('Submissions Storage v2', () => {
       await getSubmissionHistory('two-sum');
 
       // Schema should be v2
-      expect(mockStorage['submissions_schema_version']).toBe(2);
+      expect(mockStorage.submissions_schema_version).toBe(2);
 
       // Storage should actually be in v2 format
       const storedValue = mockStorage['submissions::two-sum'];
@@ -522,7 +524,7 @@ describe('Submissions Storage v2', () => {
         createSubmissionRecord('sub-2', 250),
       ];
       mockStorage['submissions::two-sum'] = v2History;
-      mockStorage['submissions_schema_version'] = 2;
+      mockStorage.submissions_schema_version = 2;
 
       // Clear the set spy call count
       vi.clearAllMocks();

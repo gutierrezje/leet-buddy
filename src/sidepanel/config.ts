@@ -1,5 +1,5 @@
-import { Blocks, LayoutTemplate, Gauge, Lightbulb } from 'lucide-react';
-import { HintPrompt } from '@/shared/types';
+import { Blocks, Gauge, LayoutTemplate, Lightbulb } from 'lucide-react';
+import type { HintPrompt } from '@/shared/types';
 
 export const GEMINI_MODEL = 'gemini-2.5-flash';
 

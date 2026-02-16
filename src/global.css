@@ -1,6 +1,6 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,8 +43,8 @@
   --color-difficulty-easy: var(--difficulty-easy);
   --color-difficulty-medium: var(--difficulty-medium);
   --color-difficulty-hard: var(--difficulty-hard);
-  --font-sans: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
@@ -82,7 +82,7 @@
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.75 0.16 55);
   --difficulty-easy: oklch(0.72 0.17 155);
-  --difficulty-medium: oklch(0.80 0.15 85);
+  --difficulty-medium: oklch(0.8 0.15 85);
   --difficulty-hard: oklch(0.65 0.22 25);
 }
 
@@ -96,11 +96,11 @@
   --primary: oklch(0.75 0.16 55);
   --primary-foreground: oklch(0.13 0 0);
   --secondary: oklch(0.24 0.005 260);
-  --secondary-foreground: oklch(0.90 0.005 260);
+  --secondary-foreground: oklch(0.9 0.005 260);
   --muted: oklch(0.24 0.005 260);
   --muted-foreground: oklch(0.75 0.01 260);
   --accent: oklch(0.22 0.005 260);
-  --accent-foreground: oklch(0.90 0.005 260);
+  --accent-foreground: oklch(0.9 0.005 260);
   --destructive: oklch(0.65 0.2 25);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 14%);
@@ -119,7 +119,7 @@
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.75 0.16 55);
   --difficulty-easy: oklch(0.72 0.17 155);
-  --difficulty-medium: oklch(0.80 0.15 85);
+  --difficulty-medium: oklch(0.8 0.15 85);
   --difficulty-hard: oklch(0.65 0.22 25);
 }
 

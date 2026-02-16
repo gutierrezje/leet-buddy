@@ -10,18 +10,19 @@
  * 3. Keep this file as thin orchestration
  * See src/test/README.md for details.
  */
-import {
-  SubmissionStatus,
-  PathInfo,
-  CurrentProblem,
-  ProblemMetadataMessage,
-  SubmissionAcceptedMessage,
-  ProblemClearedMessage,
-} from '@/shared/types';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import SidebarLauncher from './views/SidebarLauncher';
+import type {
+  CurrentProblem,
+  PathInfo,
+  ProblemClearedMessage,
+  ProblemMetadataMessage,
+  SubmissionAcceptedMessage,
+  SubmissionStatus,
+} from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
+import SidebarLauncher from './views/SidebarLauncher';
 
 const debug = createLogger('content');
 

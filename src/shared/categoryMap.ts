@@ -153,8 +153,10 @@ export function mapTagsToCompact(tagNames: string[]): CompactTopics[] {
   const out = new Set<CompactTopics>();
   for (const raw of tagNames) {
     const cats = TAG_TO_COMPACT[raw];
-    if (cats && cats.length) {
-      cats.forEach((c) => out.add(c));
+    if (cats?.length) {
+      for (const c of cats) {
+        out.add(c);
+      }
     } else {
       out.add('Other');
     }

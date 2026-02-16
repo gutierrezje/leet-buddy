@@ -1,8 +1,8 @@
-import { cn } from '@/lib/utils';
-import { Message } from '@/shared/types';
 import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import { cn } from '@/lib/utils';
+import type { Message } from '@/shared/types';
 import 'katex/dist/katex.min.css';
 
 interface ChatMessageProps {
@@ -13,9 +13,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.sender === 'user';
 
   return (
-    <div
-      className={cn('flex mb-2', isUser ? 'justify-end' : 'justify-start')}
-    >
+    <div className={cn('flex mb-2', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
           'max-w-[85%] min-w-0 rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
@@ -34,7 +32,10 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           <p className="whitespace-pre-wrap break-words">{message.text}</p>
         ) : (
           <div className="prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-pre:overflow-x-auto prose-pre:max-w-full prose-code:break-words prose-headings:text-foreground prose-strong:text-foreground prose-code:text-primary/90 prose-code:font-mono prose-pre:bg-background/50 prose-pre:border prose-pre:border-border">
-            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
               {message.text}
             </ReactMarkdown>
           </div>

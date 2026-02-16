@@ -1,4 +1,4 @@
-import { CurrentProblem } from './problems';
+import type { CurrentProblem } from './problems';
 
 export type SubmissionStatus = 'Accepted' | 'Failed';
 

@@ -1,6 +1,6 @@
-import { COMPACT_TOPICS } from '@/shared/categoryMap';
-import { TopicStats } from '@/shared/types';
 import { cn } from '@/lib/utils';
+import { COMPACT_TOPICS } from '@/shared/categoryMap';
+import type { TopicStats } from '@/shared/types';
 
 type TopicsViewProps = {
   categoryStats: Record<string, TopicStats>;
@@ -24,9 +24,7 @@ export function TopicsView({ categoryStats }: TopicsViewProps) {
             key={cat}
             className={cn(
               'group relative rounded-md px-3 py-2 transition-colors',
-              hasData
-                ? 'hover:bg-secondary/60'
-                : 'opacity-35'
+              hasData ? 'hover:bg-secondary/60' : 'opacity-35'
             )}
           >
             <div className="flex items-center justify-between mb-1">

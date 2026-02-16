@@ -1,9 +1,9 @@
-import { useState, useEffect, useReducer } from 'react';
-import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
-import { Message } from '@/shared/types';
-import { SYSTEM_PROMPT, GEMINI_MODEL } from '../config';
-import initialMessages from '../data/messages.json';
+import { type ChatSession, GoogleGenerativeAI } from '@google/generative-ai';
+import { useEffect, useReducer, useState } from 'react';
+import type { Message } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
+import { GEMINI_MODEL, SYSTEM_PROMPT } from '../config';
+import initialMessages from '../data/messages.json';
 
 const debug = createLogger('useChatSession');
 

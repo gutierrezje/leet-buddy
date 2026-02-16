@@ -5,7 +5,7 @@
  * Phase 6 regression test: Ensures re-entry detection and cache clearing
  * work correctly to prevent stale state.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock types
 type MockStorageLocal = {
@@ -33,13 +33,13 @@ describe('Content Script Route Transitions', () => {
     sentMessages = [];
 
     mockStorage = {
-      get: vi.fn((keys, callback) => {
+      get: vi.fn((_keys, callback) => {
         callback({});
       }),
-      set: vi.fn((items, callback) => {
+      set: vi.fn((_items, callback) => {
         if (callback) callback();
       }),
-      remove: vi.fn((keys, callback) => {
+      remove: vi.fn((_keys, callback) => {
         if (callback) callback();
       }),
     };
@@ -66,7 +66,7 @@ describe('Content Script Route Transitions', () => {
           removeListener: vi.fn(),
         },
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: Partial Chrome API mock for testing
     } as any;
   });
 

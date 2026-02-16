@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 // Mock Chrome API for extension testing
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: Partial Chrome API mock for testing
 (globalThis as any).chrome = {
   runtime: {
     sendMessage: vi.fn(),

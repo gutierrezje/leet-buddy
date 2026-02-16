@@ -1,4 +1,4 @@
-import { SubmissionRecord, TopicStats } from '../types';
+import type { SubmissionRecord, TopicStats } from '../types';
 
 export function computeTopicStats(
   submissions: SubmissionRecord[]

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createLogger } from '@/shared/utils/debug';
 
 const debug = createLogger('useApiKeyState');

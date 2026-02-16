@@ -1,18 +1,17 @@
-import { useState } from 'react';
 import { Settings } from 'lucide-react';
-
-import { TabNavigation } from './components/TabNavigation';
-import ChatPane from './components/ChatPane';
-import ReviewPane from './components/ReviewPane';
+import { useState } from 'react';
 import ApiKeyError from './components/ApiKeyError';
+import ChatPane from './components/ChatPane';
 import EmptyState from './components/EmptyState';
-import Stopwatch from './components/Stopwatch';
+import ReviewPane from './components/ReviewPane';
 import SaveModal from './components/SaveModal';
-import { useApiKeyState } from './hooks/useApiKeyState';
-import { useProblemContext } from './hooks/useProblemContext';
-import { useChatSession } from './hooks/useChatSession';
-import { useSubmissionFlow } from './hooks/useSubmissionFlow';
+import Stopwatch from './components/Stopwatch';
+import { TabNavigation } from './components/TabNavigation';
 import { HINT_PROMPTS } from './config';
+import { useApiKeyState } from './hooks/useApiKeyState';
+import { useChatSession } from './hooks/useChatSession';
+import { useProblemContext } from './hooks/useProblemContext';
+import { useSubmissionFlow } from './hooks/useSubmissionFlow';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
@@ -72,10 +71,14 @@ export default function App() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/15 flex-shrink-0">
-              <span className="text-primary font-semibold text-sm font-mono">LB</span>
+              <span className="text-primary font-semibold text-sm font-mono">
+                LB
+              </span>
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-semibold tracking-tight leading-tight">LeetBuddy</h1>
+              <h1 className="text-sm font-semibold tracking-tight leading-tight">
+                LeetBuddy
+              </h1>
               <p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
                 {currentProblem?.title || 'No problem detected'}
               </p>
@@ -84,6 +87,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
             <button
+              type="button"
               onClick={handleOpenOptions}
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
