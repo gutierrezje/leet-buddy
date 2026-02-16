@@ -34,10 +34,6 @@ export type SubmissionAcceptedMessage = {
   at: number;
 };
 
-export type GetCurrentProblemRequest = {
-  type: 'GET_CURRENT_PROBLEM';
-};
-
 export type ProblemClearedMessage = {
   type: 'PROBLEM_CLEARED';
 };
@@ -46,7 +42,6 @@ export type ProblemClearedMessage = {
 export type RuntimeMessage =
   | ProblemMetadataMessage
   | SubmissionAcceptedMessage
-  | GetCurrentProblemRequest
   | ProblemClearedMessage;
 
 // Type guards for runtime message validation
@@ -81,17 +76,6 @@ export function isSubmissionAcceptedMessage(
   );
 }
 
-export function isGetCurrentProblemRequest(
-  msg: unknown
-): msg is GetCurrentProblemRequest {
-  return (
-    typeof msg === 'object' &&
-    msg !== null &&
-    'type' in msg &&
-    msg.type === 'GET_CURRENT_PROBLEM'
-  );
-}
-
 export function isProblemClearedMessage(
   msg: unknown
 ): msg is ProblemClearedMessage {
@@ -100,14 +84,5 @@ export function isProblemClearedMessage(
     msg !== null &&
     'type' in msg &&
     msg.type === 'PROBLEM_CLEARED'
-  );
-}
-
-export function isRuntimeMessage(msg: unknown): msg is RuntimeMessage {
-  return (
-    isProblemMetadataMessage(msg) ||
-    isSubmissionAcceptedMessage(msg) ||
-    isGetCurrentProblemRequest(msg) ||
-    isProblemClearedMessage(msg)
   );
 }

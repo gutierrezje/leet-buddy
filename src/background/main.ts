@@ -32,19 +32,16 @@ async function validateApiKey(apiKey: string): Promise<boolean> {
   }
 }
 
-async function checkAndStoreApiKeyStatus() {
+async function validateApiKeyOnChange() {
   const apiKey = await getApiKey();
 
   if (!apiKey) {
     debug('No API key found');
-    await chrome.storage.local.set({ apiKeyStatus: false });
     return;
   }
 
   debug('Validating API key...');
   const isValid = await validateApiKey(apiKey);
-
-  await chrome.storage.local.set({ apiKeyStatus: isValid });
   debug('API key validation status: %s', isValid);
 }
 
@@ -52,16 +49,16 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   // Check if apiKey was the item that changed.
   if (namespace === 'local' && changes.apiKey) {
     debug('API key has changed. Re-validating...');
-    checkAndStoreApiKeyStatus();
+    validateApiKeyOnChange();
   }
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  checkAndStoreApiKeyStatus();
+  validateApiKeyOnChange();
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  checkAndStoreApiKeyStatus();
+  validateApiKeyOnChange();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender) => {

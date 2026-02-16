@@ -17,7 +17,6 @@ import {
   ProblemMetadataMessage,
   SubmissionAcceptedMessage,
   ProblemClearedMessage,
-  GetCurrentProblemRequest,
 } from '@/shared/types';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -264,16 +263,6 @@ cycle();
 new MutationObserver(debounced).observe(document.body, {
   childList: true,
   subtree: true,
-});
-
-chrome.runtime.onMessage.addListener((req, _s, send) => {
-  const msg = req as GetCurrentProblemRequest;
-  if (msg.type === 'GET_CURRENT_PROBLEM') {
-    chrome.storage.local.get(['currentProblem'], (d) =>
-      send(d.currentProblem || null)
-    );
-    return true;
-  }
 });
 
 // Inject a button to open the side panel

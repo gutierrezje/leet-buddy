@@ -3,12 +3,9 @@ import {
   isProblemMetadataMessage,
   isSubmissionAcceptedMessage,
   isProblemClearedMessage,
-  isGetCurrentProblemRequest,
-  isRuntimeMessage,
   type ProblemMetadataMessage,
   type SubmissionAcceptedMessage,
   type ProblemClearedMessage,
-  type GetCurrentProblemRequest,
 } from './messaging';
 
 describe('Runtime Message Type Guards', () => {
@@ -161,85 +158,6 @@ describe('Runtime Message Type Guards', () => {
       };
 
       expect(isProblemClearedMessage(msg)).toBe(false);
-    });
-  });
-
-  describe('isGetCurrentProblemRequest', () => {
-    it('validates correct GET_CURRENT_PROBLEM message', () => {
-      const msg: GetCurrentProblemRequest = {
-        type: 'GET_CURRENT_PROBLEM',
-      };
-
-      expect(isGetCurrentProblemRequest(msg)).toBe(true);
-    });
-
-    it('rejects message with wrong type', () => {
-      const msg = {
-        type: 'WRONG_TYPE',
-      };
-
-      expect(isGetCurrentProblemRequest(msg)).toBe(false);
-    });
-
-    it('rejects null', () => {
-      expect(isGetCurrentProblemRequest(null)).toBe(false);
-    });
-  });
-
-  describe('isRuntimeMessage', () => {
-    it('accepts PROBLEM_METADATA message', () => {
-      const msg: ProblemMetadataMessage = {
-        type: 'PROBLEM_METADATA',
-        slug: 'two-sum',
-        title: 'Two Sum',
-        difficulty: 'Easy',
-        tags: ['Array'],
-      };
-
-      expect(isRuntimeMessage(msg)).toBe(true);
-    });
-
-    it('accepts SUBMISSION_ACCEPTED message', () => {
-      const msg: SubmissionAcceptedMessage = {
-        type: 'SUBMISSION_ACCEPTED',
-        slug: 'two-sum',
-        submissionId: '123456',
-        at: 1234567890,
-      };
-
-      expect(isRuntimeMessage(msg)).toBe(true);
-    });
-
-    it('accepts PROBLEM_CLEARED message', () => {
-      const msg: ProblemClearedMessage = {
-        type: 'PROBLEM_CLEARED',
-      };
-
-      expect(isRuntimeMessage(msg)).toBe(true);
-    });
-
-    it('accepts GET_CURRENT_PROBLEM message', () => {
-      const msg: GetCurrentProblemRequest = {
-        type: 'GET_CURRENT_PROBLEM',
-      };
-
-      expect(isRuntimeMessage(msg)).toBe(true);
-    });
-
-    it('rejects unknown message type', () => {
-      const msg = {
-        type: 'UNKNOWN_TYPE',
-        data: 'something',
-      };
-
-      expect(isRuntimeMessage(msg)).toBe(false);
-    });
-
-    it('rejects invalid messages', () => {
-      expect(isRuntimeMessage(null)).toBe(false);
-      expect(isRuntimeMessage(undefined)).toBe(false);
-      expect(isRuntimeMessage('string')).toBe(false);
-      expect(isRuntimeMessage({})).toBe(false);
     });
   });
 });

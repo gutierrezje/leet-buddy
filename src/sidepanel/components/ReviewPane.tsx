@@ -15,16 +15,26 @@ export default function ReviewPane() {
   const [categoryStats, setCategoryStats] = useState<
     Record<string, TopicStats>
   >({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Initial load
-    getAllSubmissions().then((data) => {
-      setSubmissions(data);
-      const stats = computeTopicStats(Object.values(data));
-      setCategoryStats(stats);
-      setLoading(false);
-    });
+    setLoading(true);
+    setError(null);
+
+    getAllSubmissions()
+      .then((data) => {
+        setSubmissions(data);
+        const stats = computeTopicStats(Object.values(data));
+        setCategoryStats(stats);
+        setLoading(false);
+      })
+      .catch((err) => {
+        debug('Error loading submissions: %O', err);
+        setError('Failed to load submissions');
+        setLoading(false);
+      });
 
     // Listen for storage changes
     const onStorageChange = (
@@ -38,11 +48,21 @@ export default function ReviewPane() {
         k.startsWith('submissions::')
       );
       if (touched.length > 0) {
-        getAllSubmissions().then((data) => {
-          setSubmissions(data);
-          const stats = computeTopicStats(Object.values(data));
-          setCategoryStats(stats);
-        });
+        setLoading(true);
+        setError(null);
+
+        getAllSubmissions()
+          .then((data) => {
+            setSubmissions(data);
+            const stats = computeTopicStats(Object.values(data));
+            setCategoryStats(stats);
+            setLoading(false);
+          })
+          .catch((err) => {
+            debug('Error reloading submissions: %O', err);
+            setError('Failed to reload submissions');
+            setLoading(false);
+          });
       }
     };
 
@@ -52,6 +72,15 @@ export default function ReviewPane() {
 
   if (loading) {
     return <div className="p-4 text-sm">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-sm">
+        <h2 className="text-lg font-semibold">Review</h2>
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
   }
 
   const entries = Object.entries(submissions);
