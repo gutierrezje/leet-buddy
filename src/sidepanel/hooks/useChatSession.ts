@@ -1,7 +1,7 @@
 import { useState, useEffect, useReducer } from 'react';
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 import { Message } from '@/shared/types';
-import { SYSTEM_PROMPT } from '../config';
+import { SYSTEM_PROMPT, GEMINI_MODEL } from '../config';
 import initialMessages from '../data/messages.json';
 import { createLogger } from '@/shared/utils/debug';
 
@@ -69,7 +69,7 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     dispatch({ type: 'INITIALIZE_START' });
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.`;
 

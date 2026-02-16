@@ -1,24 +1,73 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useEffect, useState } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 import { CurrentProblem } from '@/shared/types';
 import { formatHMS } from '@/shared/utils/time';
 import { cn } from '@/lib/utils';
 
-const difficultyColorsText: Record<string, string> = {
+function TimeWheel({
+  value,
+  onChange,
+  max,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  max?: number;
+  label: string;
+}) {
+  const increment = () => {
+    const next = value + 1;
+    onChange(max !== undefined ? (next > max ? 0 : next) : next);
+  };
+  const decrement = () => {
+    const next = value - 1;
+    onChange(next < 0 ? (max ?? 0) : next);
+  };
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={increment}
+        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors"
+      >
+        <ChevronUp className="h-4 w-4" />
+      </button>
+      <div className="w-12 h-10 rounded-md bg-secondary border border-border flex items-center justify-center">
+        <span className="text-base font-mono tabular-nums text-foreground">
+          {pad(value)}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={decrement}
+        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors"
+      >
+        <ChevronDown className="h-4 w-4" />
+      </button>
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+const difficultyColors: Record<string, string> = {
   Easy: 'text-difficulty-easy',
   Medium: 'text-difficulty-medium',
   Hard: 'text-difficulty-hard',
 };
 
-const difficultyColorsBg: Record<string, string> = {
+const difficultyDots: Record<string, string> = {
   Easy: 'bg-difficulty-easy',
   Medium: 'bg-difficulty-medium',
   Hard: 'bg-difficulty-hard',
@@ -58,104 +107,88 @@ export default function SaveModal({
 
   const handleConfirm = () => {
     const totalSec = hours * 3600 + minutes * 60 + seconds;
-
     onConfirm(totalSec);
   };
 
-  const pad = (n: number) => n.toString().padStart(2, '0');
-
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <h2 className="text-xl font-bold">Mark Complete?</h2>
+          <DialogTitle className="text-base">Mark Complete</DialogTitle>
+          <DialogDescription className="text-xs">
+            Save your submission time for this problem.
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex items-start flex-col w-full">
-          <div className="text-xl font-semibold border-b w-full mb-2">
-            Problem: {problem.title}
-          </div>
-          <div className="flex flex-row w-full justify-between">
-            <div className="text-base mb-2">
-              Difficulty:{' '}
-              <div className="flex items-center gap-1">
+
+        <div className="space-y-3">
+          {/* Problem Info */}
+          <div className="rounded-md bg-secondary/40 border border-border p-3 space-y-2">
+            <div className="text-sm font-medium">{problem.title}</div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
                 <div
                   className={cn(
-                    'w-2 h-2 rounded-full',
-                    difficultyColorsBg[problem.difficulty]
+                    'w-1.5 h-1.5 rounded-full',
+                    difficultyDots[problem.difficulty]
                   )}
-                ></div>
+                />
                 <span
                   className={cn(
-                    'text-sm',
-                    difficultyColorsText[problem.difficulty]
+                    'text-xs',
+                    difficultyColors[problem.difficulty]
                   )}
                 >
                   {problem.difficulty}
                 </span>
               </div>
-            </div>
-
-            <div className="text-base mb-2">
-              Previous Time:{' '}
-              <div className="font-mono text-sm text-muted-foreground">
-                {previousTime ? `${formatHMS(previousTime)}` : 'N/A'}
+              <div className="text-xs text-muted-foreground">
+                Prev:{' '}
+                <span className="font-mono">
+                  {previousTime ? formatHMS(previousTime) : '--:--'}
+                </span>
               </div>
             </div>
+            {problem.tags && problem.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {problem.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs px-1.5 py-0.5 rounded bg-background text-muted-foreground border border-border"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="text-base mb-2">
-            Tags:{' '}
-            <div className="text-sm text-muted-foreground">
-              {problem.tags?.join(', ')}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start justify-center gap-2 w-full text-sm">
-            <div className="block text-base font-medium">Time:</div>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min="0"
-                value={pad(hours)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setHours(isNaN(val) ? 0 : val);
-                }}
-                className="text-sm text-center font-mono"
-              />
-              <span>:</span>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                value={pad(minutes)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setMinutes(isNaN(val) ? 0 : val);
-                }}
-                className="text-sm text-center font-mono"
-              />
-              <span>:</span>
-              <Input
-                type="number"
-                min="0"
-                max="59"
-                value={pad(seconds)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setSeconds(isNaN(val) ? 0 : val);
-                }}
-                className="text-sm text-center font-mono"
-              />
+          {/* Time Picker */}
+          <div className="flex flex-col items-center">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-2 self-start">
+              Time
+            </label>
+            <div className="flex items-start gap-2">
+              <TimeWheel value={hours} onChange={setHours} label="hrs" />
+              <span className="text-muted-foreground text-lg font-mono mt-3">:</span>
+              <TimeWheel value={minutes} onChange={setMinutes} max={59} label="min" />
+              <span className="text-muted-foreground text-lg font-mono mt-3">:</span>
+              <TimeWheel value={seconds} onChange={setSeconds} max={59} label="sec" />
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <div className="flex items-center justify-center gap-2">
-            <Button variant="ghost" onClick={onCancel}>
+          <div className="flex items-center gap-2 w-full">
+            <Button
+              variant="ghost"
+              onClick={onCancel}
+              className="flex-1 text-xs"
+            >
               Cancel
             </Button>
-            <Button onClick={handleConfirm}>Save</Button>
+            <Button onClick={handleConfirm} className="flex-1 text-xs">
+              Save
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>

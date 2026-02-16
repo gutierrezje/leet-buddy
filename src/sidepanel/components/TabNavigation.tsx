@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface TabNavigationProps {
   activeTab: 'chat' | 'review';
@@ -6,28 +6,30 @@ interface TabNavigationProps {
 }
 
 export function TabNavigation({ activeTab, onChangeTab }: TabNavigationProps) {
+  const tabs = [
+    { id: 'chat' as const, label: 'Chat' },
+    { id: 'review' as const, label: 'Review' },
+  ];
+
   return (
-    <div className="flex border-b bg-background border-border">
-      <Button
-        className={`flex-1 justify-center bg-background rounded-none ${
-          activeTab === 'chat'
-            ? 'text-primary border-primary border-b hover:text-foreground '
-            : 'text-foreground border-transparent'
-        }`}
-        onClick={() => onChangeTab('chat')}
-      >
-        Chat
-      </Button>
-      <Button
-        className={`flex-1 justify-center bg-background rounded-none ${
-          activeTab === 'review'
-            ? 'text-primary border-primary border-b hover:text-foreground '
-            : 'text-foreground border-transparent'
-        }`}
-        onClick={() => onChangeTab('review')}
-      >
-        Review
-      </Button>
+    <div className="flex-shrink-0 flex border-b border-border px-4">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => onChangeTab(tab.id)}
+          className={cn(
+            'relative px-3 py-2 text-xs font-medium tracking-wide uppercase transition-colors',
+            activeTab === tab.id
+              ? 'text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {tab.label}
+          {activeTab === tab.id && (
+            <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full" />
+          )}
+        </button>
+      ))}
     </div>
   );
 }

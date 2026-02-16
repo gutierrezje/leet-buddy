@@ -311,7 +311,7 @@ describe('App Message Handling', () => {
       // Save modal should appear
       await waitFor(
         () => {
-          expect(screen.getByText(/Mark Complete\?/i)).toBeInTheDocument();
+          expect(screen.getByText(/Mark Complete/i)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
@@ -352,7 +352,7 @@ describe('App Message Handling', () => {
 
       // Modal should NOT appear (wait a bit to ensure it doesn't show)
       await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(screen.queryByText(/Mark Complete\?/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Mark Complete/i)).not.toBeInTheDocument();
     });
   });
 
@@ -557,7 +557,7 @@ describe('App Message Handling', () => {
 
       // Modal should NOT appear (already saved)
       await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(screen.queryByText(/Mark Complete\?/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Mark Complete/i)).not.toBeInTheDocument();
     });
 
     it('allows save modal for different submission ID on same problem', async () => {
@@ -597,7 +597,7 @@ describe('App Message Handling', () => {
       // Modal appears
       await waitFor(
         () => {
-          expect(screen.getByText(/Mark Complete\?/i)).toBeInTheDocument();
+          expect(screen.getByText(/Mark Complete/i)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
@@ -622,7 +622,7 @@ describe('App Message Handling', () => {
       // Modal should appear again for new submission
       await waitFor(
         () => {
-          expect(screen.getByText(/Mark Complete\?/i)).toBeInTheDocument();
+          expect(screen.getByText(/Mark Complete/i)).toBeInTheDocument();
         },
         { timeout: 3000 }
       );

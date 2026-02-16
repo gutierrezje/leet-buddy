@@ -1,6 +1,8 @@
 import { Blocks, LayoutTemplate, Gauge, Lightbulb } from 'lucide-react';
 import { HintPrompt } from '@/shared/types';
 
+export const GEMINI_MODEL = 'gemini-2.5-flash';
+
 export const SYSTEM_PROMPT = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.
 

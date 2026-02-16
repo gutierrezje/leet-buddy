@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquareCode } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
@@ -17,7 +17,6 @@ import { HINT_PROMPTS } from './config';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
 
-  // Extract state management to custom hooks
   const { apiKey, loading: apiKeyLoading } = useApiKeyState();
   const { currentProblem, loading: problemLoading } = useProblemContext();
 
@@ -46,42 +45,52 @@ export default function App() {
     chrome.runtime.openOptionsPage();
   };
 
-  // Handle missing API key FIRST (before loading state check)
   if (!apiKey && !apiKeyLoading) {
     return <ApiKeyError onOpenOptions={handleOpenOptions} />;
   }
 
-  // Show empty state if no problem is detected and not loading
   if (!currentProblem?.title && !problemLoading) {
     return <EmptyState />;
   }
 
-  // Show loading state while initializing
   if ((problemLoading || chatLoading) && messages.length <= 1) {
     return (
-      <div className="flex items-center justify-center h-full m-4">
-        Loading...
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <div className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:-300ms]" />
+          <div className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:-150ms]" />
+          <div className="h-1 w-1 rounded-full bg-primary animate-bounce" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-screen flex flex-col bg-background text-foreground">
+    <div className="w-full h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center p-4 border-b border-border ">
-        <div className="flex flex-grow items-center">
-          <MessageSquareCode
-            className="h-10 w-10 px-2 text-background bg-primary rounded-sm mr-3 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={handleOpenOptions}
-          />
-          <div className="flex items-start justify-between flex-col">
-            <h1 className="text-lg font-semibold">LeetBuddy</h1>
-            <span className="text-xs text-muted-foreground">
-              {currentProblem?.title || 'No problem detected'}
-            </span>
+      <div className="flex-shrink-0 px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/15 flex-shrink-0">
+              <span className="text-primary font-semibold text-sm font-mono">LB</span>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold tracking-tight leading-tight">LeetBuddy</h1>
+              <p className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
+                {currentProblem?.title || 'No problem detected'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
+            <button
+              onClick={handleOpenOptions}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
-        <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
       </div>
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />

@@ -1,11 +1,5 @@
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Settings, PanelRight } from 'lucide-react';
 
 export default function App() {
   const handleOpenOptions = () => {
@@ -13,34 +7,47 @@ export default function App() {
   };
 
   const handleOpenSidePanel = async () => {
-    // Get the current tab
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
 
     if (tab) {
-      // Open the side panel for the current tab
       await chrome.sidePanel.open({ windowId: tab.windowId });
     }
   };
 
   return (
-    <div className="w-80 bg-background">
-      <Card className="shadow-none">
-        <CardHeader className="">
-          <div>
-            <CardTitle className="text-lg text-foreground">LeetBuddy</CardTitle>
-            <CardDescription className="text-md text-foreground-muted">
-              AI Technical Interview Assistant
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
-          <Button onClick={handleOpenSidePanel}>Open LeetBuddy</Button>
-          <Button onClick={handleOpenOptions}>Open Configuration</Button>
-        </CardContent>
-      </Card>
+    <div className="w-72 bg-background p-4">
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/15 shrink-0">
+          <span className="text-primary font-semibold text-sm font-mono">LB</span>
+        </div>
+        <div>
+          <h1 className="text-sm font-semibold tracking-tight">LeetBuddy</h1>
+          <p className="text-xs text-muted-foreground">
+            AI Interview Assistant
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Button
+          onClick={handleOpenSidePanel}
+          className="w-full justify-start text-xs h-8"
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+          Open Side Panel
+        </Button>
+        <Button
+          onClick={handleOpenOptions}
+          variant="outline"
+          className="w-full justify-start text-xs h-8"
+        >
+          <Settings className="h-3.5 w-3.5" />
+          Configuration
+        </Button>
+      </div>
     </div>
   );
 }

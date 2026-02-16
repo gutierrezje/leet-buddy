@@ -1,52 +1,51 @@
-import { ExternalLink, Lightbulb } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
 export default function EmptyState() {
   const handleRandomProblem = () => {
-    // Open a random LeetCode problem in a new tab
     window.open('https://leetcode.com/problemset/', '_blank');
   };
 
   return (
-    <div className="flex items-center justify-center h-full p-6">
-      <Card className="max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Lightbulb className="h-12 w-12 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">Ready to Practice?</CardTitle>
-          <CardDescription className="text-base mt-2">
-            Navigate to a LeetCode problem page to get started with your AI
-            coding interview assistant.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p>LeetBuddy will help you by:</p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Asking guiding questions</li>
-              <li>Providing strategic hints</li>
-              <li>Tracking your solving time</li>
-              <li>Reviewing your progress</li>
-            </ul>
-          </div>
-          <Button
-            className="w-full"
-            onClick={handleRandomProblem}
-            variant="default"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Browse LeetCode Problems
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col items-center justify-center h-screen p-8 text-center bg-background">
+      <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 mb-4">
+        <span className="text-primary font-semibold text-lg font-mono">LB</span>
+      </div>
+
+      <h2 className="text-base font-semibold mb-1">Ready to Practice</h2>
+      <p className="text-xs text-muted-foreground max-w-[240px] leading-relaxed mb-6">
+        Navigate to a LeetCode problem to start your guided interview session.
+      </p>
+
+      <div className="w-full max-w-[200px] space-y-3 mb-6">
+        <div className="flex items-start gap-2.5">
+          <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+          <span className="text-xs text-muted-foreground text-left">
+            Guided questions & hints
+          </span>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+          <span className="text-xs text-muted-foreground text-left">
+            Solve time tracking
+          </span>
+        </div>
+        <div className="flex items-start gap-2.5">
+          <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+          <span className="text-xs text-muted-foreground text-left">
+            Topic coverage review
+          </span>
+        </div>
+      </div>
+
+      <Button
+        onClick={handleRandomProblem}
+        variant="outline"
+        className="text-xs"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Browse Problems
+      </Button>
     </div>
   );
 }

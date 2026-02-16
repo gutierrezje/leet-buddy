@@ -177,7 +177,7 @@ describe('ChatMessage', () => {
 
       const { container } = render(<ChatMessage message={message} />);
 
-      const card = container.querySelector('.bg-accent');
+      const card = container.querySelector('[class*="bg-secondary"]');
       expect(card).toBeInTheDocument();
     });
 
@@ -191,7 +191,7 @@ describe('ChatMessage', () => {
 
       const { container } = render(<ChatMessage message={message} />);
 
-      const messageContainer = container.querySelector('.max-w-xs');
+      const messageContainer = container.querySelector('[class*="max-w-"]');
       expect(messageContainer).toBeInTheDocument();
     });
   });

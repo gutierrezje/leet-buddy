@@ -1,21 +1,16 @@
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
-import { Save, CheckCircle, Trash2 } from 'lucide-react';
+import { Save, CheckCircle, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GEMINI_MODEL } from '@/sidepanel/config';
 
 export default function App() {
   const [apiKey, setApiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
   const [showSavedMessage, setShowSavedMessage] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  // On component mount, check if an API key is already saved
   useEffect(() => {
     chrome.storage.local.get('apiKey', (data) => {
       if (data.apiKey) {
@@ -25,21 +20,36 @@ export default function App() {
     });
   }, []);
 
-  const handleSave = () => {
-    // Check if api key is empty
+  const handleSave = async () => {
     if (!apiKey.trim()) {
-      alert('Please enter a valid API key.');
+      setValidationError('Please enter an API key.');
       return;
     }
 
-    // Save the API key to Chrome storage
-    chrome.storage.local.set({ apiKey }, () => {
-      setIsKeySaved(true);
-      setShowSavedMessage(true);
-      setTimeout(() => {
-        setShowSavedMessage(false);
-      }, 2000);
-    });
+    setValidating(true);
+    setValidationError(null);
+
+    try {
+      // Validate the API key by making a simple request
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+      await model.generateContent('test');
+
+      // If successful, save the key
+      chrome.storage.local.set({ apiKey }, () => {
+        setIsKeySaved(true);
+        setShowSavedMessage(true);
+        setValidating(false);
+        setTimeout(() => {
+          setShowSavedMessage(false);
+        }, 2000);
+      });
+    } catch (error) {
+      setValidating(false);
+      setValidationError(
+        'Invalid API key. Please check your key and try again.'
+      );
+    }
   };
 
   const handleRemove = () => {
@@ -50,52 +60,104 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen p-4 bg-background text-foreground">
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold">LeetBuddy Configuration</h1>
-      </div>
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Google AI Studio API Key
-          </CardTitle>
-          <CardDescription className="">
-            Enter your Gemini API key below to enable LeetBuddy.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="">
-          <label htmlFor="api-key" className="block mb-2 text-sm font-medium">
-            API Key
-          </label>
-          <div className="mb-4 flex flex-row gap-2">
-            <Input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Type in your API key here..."
-            />
-            <Button onClick={handleSave} disabled={showSavedMessage}>
-              {showSavedMessage ? (
-                <>
-                  <CheckCircle className="" />
-                  Saved
-                </>
-              ) : (
-                <>
-                  <Save className="" />
-                  Save
-                </>
-              )}
-            </Button>
-            {isKeySaved && (
-              <Button variant="destructive" onClick={handleRemove}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-lg mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-center h-9 w-9 rounded-md bg-primary/15">
+              <span className="text-primary font-semibold text-sm font-mono">
+                LB
+              </span>
+            </div>
+            <h1 className="text-lg font-semibold tracking-tight">
+              LeetBuddy
+            </h1>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-sm text-muted-foreground">Configuration</p>
+        </div>
+
+        {/* API Key Section */}
+        <div className="rounded-lg bg-card border border-border p-5">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold mb-1">
+              Google AI Studio API Key
+            </h2>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Required to enable AI-powered interview guidance.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label
+                htmlFor="api-key"
+                className="text-xs uppercase tracking-widest text-muted-foreground font-medium"
+              >
+                API Key
+              </label>
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  id="api-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Paste your API key..."
+                  className="flex-1 h-9 rounded-md bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all"
+                />
+                <Button
+                  onClick={handleSave}
+                  disabled={showSavedMessage || validating}
+                  className="text-xs h-9"
+                >
+                  {showSavedMessage ? (
+                    <>
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Saved
+                    </>
+                  ) : validating ? (
+                    <>Validating...</>
+                  ) : (
+                    <>
+                      <Save className="h-3.5 w-3.5" />
+                      Save
+                    </>
+                  )}
+                </Button>
+                {isKeySaved && (
+                  <Button
+                    variant="ghost"
+                    onClick={handleRemove}
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                    size="icon"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {validationError && (
+              <div className="flex items-center gap-2 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {validationError}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-border">
+              <a
+                href="https://aistudio.google.com/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+              >
+                Get a free API key from Google AI Studio
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

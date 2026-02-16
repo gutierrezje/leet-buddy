@@ -1,23 +1,18 @@
-import { Button } from '@/components/ui/button';
-import { CheckCircle, Pause, Play, RefreshCcw } from 'lucide-react';
+import { CheckCircle, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatHMS } from '@/shared/utils/time';
+import { cn } from '@/lib/utils';
 
 type StopwatchProps = {
   onStop?: (elapsed: number) => void;
   resetTrigger?: number;
 };
 
-const swButtonStyle = `h-6 w-6 bg-accent text-accent-foreground
-hover:border-1 hover:border-primary hover:bg-accent hover:text-accent-foreground`;
-
 export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
-  // Stopwatch implementation
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const intervalRef = useRef<number | null>(null);
 
-  // setup an interval to increment elapsed time every second when running
   useEffect(() => {
     if (!isRunning) return;
 
@@ -33,7 +28,6 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
     };
   }, [isRunning]);
 
-  // reset when resetTrigger changes
   useEffect(() => {
     setIsRunning(false);
     setElapsedTime(0);
@@ -60,31 +54,39 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
     onStop?.(elapsedTime);
   };
 
+  const iconBtn =
+    'p-1.5 rounded text-muted-foreground hover:text-primary transition-colors';
+
   return (
-    <div className="flex items-center rounded-md border bg-accent px-2 py-1 gap-2">
+    <div className="flex items-center gap-1.5 rounded-md bg-secondary/50 px-2.5 py-1.5">
+      <span
+        className={cn(
+          'text-xs font-mono tabular-nums',
+          isRunning ? 'text-primary' : 'text-muted-foreground'
+        )}
+      >
+        {formatHMS(elapsedTime)}
+      </span>
+      <div className="w-px h-4 bg-border" />
       {isRunning ? (
         <>
-          <Button size="icon" className={swButtonStyle} onClick={handlePause}>
-            <Pause />
-          </Button>
-          <Button size="icon" className={swButtonStyle} onClick={handleStop}>
-            <CheckCircle />
-          </Button>
+          <button className={iconBtn} onClick={handlePause}>
+            <Pause className="h-3.5 w-3.5" />
+          </button>
+          <button className={iconBtn} onClick={handleStop}>
+            <CheckCircle className="h-3.5 w-3.5" />
+          </button>
         </>
       ) : (
         <>
-          <Button size="icon" className={swButtonStyle} onClick={handleStart}>
-            <Play />
-          </Button>
-          <Button size="icon" className={swButtonStyle} onClick={handleReset}>
-            <RefreshCcw />
-          </Button>
+          <button className={iconBtn} onClick={handleStart}>
+            <Play className="h-3.5 w-3.5" />
+          </button>
+          <button className={iconBtn} onClick={handleReset}>
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
         </>
       )}
-
-      <span className="text-sm font-mono text-accent-foreground">
-        {formatHMS(elapsedTime)}
-      </span>
     </div>
   );
 }
