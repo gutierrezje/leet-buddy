@@ -6,6 +6,7 @@ export interface Message {
   text: string;
   timestamp: number;
   isLoading?: boolean;
+  isHint?: boolean;
 }
 
 export interface HintPrompt {

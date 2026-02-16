@@ -11,6 +11,7 @@ interface ChatMessageProps {
 
 export default function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.sender === 'user';
+  const isHint = message.isHint;
 
   return (
     <div className={cn('flex mb-2', isUser ? 'justify-end' : 'justify-start')}>
@@ -18,8 +19,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         className={cn(
           'max-w-[85%] min-w-0 rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-sm'
-            : 'bg-secondary/70 text-foreground rounded-bl-sm'
+            ? isHint
+              ? 'bg-primary/80 text-primary-foreground rounded-br-sm border border-primary/30'
+              : 'bg-primary text-primary-foreground rounded-br-sm'
+            : isHint
+              ? 'bg-accent/50 text-foreground rounded-bl-sm border border-border/50'
+              : 'bg-secondary/70 text-foreground rounded-bl-sm'
         )}
       >
         {message.isLoading ? (

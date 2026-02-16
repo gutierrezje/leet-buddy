@@ -91,9 +91,17 @@ let currentSlug: string | null = null;
 let inFlightAbort: AbortController | null = null;
 let lastEmittedSlug: string | null = null;
 
-function safeSend(msg: unknown) {
+function isExtensionContextValid(): boolean {
   try {
-    if (!chrome?.runtime?.id) return;
+    return !!(chrome?.runtime?.id);
+  } catch {
+    return false;
+  }
+}
+
+function safeSend(msg: unknown) {
+  if (!isExtensionContextValid()) return;
+  try {
     chrome.runtime.sendMessage(msg, () => void chrome.runtime.lastError);
   } catch (e) {
     debug('Failed to send message: %O', e);
@@ -101,22 +109,27 @@ function safeSend(msg: unknown) {
 }
 
 function persistCurrentProblem(problem: CurrentProblem) {
-  chrome.storage.local.get(['currentProblem'], (data) => {
-    const existing: CurrentProblem | null = data.currentProblem || null;
+  if (!isExtensionContextValid()) return;
+  try {
+    chrome.storage.local.get(['currentProblem'], (data) => {
+      const existing: CurrentProblem | null = data.currentProblem || null;
 
-    const startAt =
-      existing?.slug === problem.slug ? existing.startAt : Date.now();
+      const startAt =
+        existing?.slug === problem.slug ? existing.startAt : Date.now();
 
-    chrome.storage.local.set(
-      {
-        currentProblem: {
-          ...problem,
-          startAt,
+      chrome.storage.local.set(
+        {
+          currentProblem: {
+            ...problem,
+            startAt,
+          },
         },
-      },
-      () => void chrome.runtime.lastError
-    );
-  });
+        () => void chrome.runtime.lastError
+      );
+    });
+  } catch (e) {
+    debug('Failed to persist current problem: %O', e);
+  }
 }
 
 async function fetchMeta(
@@ -173,10 +186,16 @@ async function handleSlugChange() {
       // Keep lastEmittedSlug to detect re-entry later
 
       // Clear storage
-      chrome.storage.local.remove(
-        'currentProblem',
-        () => void chrome.runtime.lastError
-      );
+      if (isExtensionContextValid()) {
+        try {
+          chrome.storage.local.remove(
+            'currentProblem',
+            () => void chrome.runtime.lastError
+          );
+        } catch (e) {
+          debug('Failed to clear storage: %O', e);
+        }
+      }
 
       // Notify sidepanel to clear stale state
       const msg: ProblemClearedMessage = { type: 'PROBLEM_CLEARED' };

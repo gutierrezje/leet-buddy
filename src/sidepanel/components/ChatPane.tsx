@@ -12,6 +12,7 @@ type Props = {
   hintPrompts: HintPrompt[];
   onChangeInput: (v: string) => void;
   onSend: (text: string, displayText?: string) => void;
+  onSendHint: (hintQuestion: string, displayText: string) => void;
 };
 
 export default function ChatPane({
@@ -21,13 +22,14 @@ export default function ChatPane({
   hintPrompts,
   onChangeInput,
   onSend,
+  onSendHint,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  }, [messages]);
 
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
@@ -58,7 +60,7 @@ export default function ChatPane({
                 key={hint.id}
                 type="button"
                 disabled={loading}
-                onClick={() => onSend(hint.messageText, hint.displayText)}
+                onClick={() => onSendHint(hint.messageText, hint.displayText)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-secondary-foreground bg-secondary hover:bg-secondary/80 hover:text-foreground border border-border/50 hover:border-border transition-all disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
               >
                 <Icon className="h-3 w-3" />

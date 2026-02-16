@@ -106,6 +106,11 @@ export default function App() {
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !showSavedMessage && !validating) {
+                      handleSave();
+                    }
+                  }}
                   placeholder="Paste your API key..."
                   className="flex-1 h-9 rounded-md bg-secondary/50 border border-border px-3 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all"
                 />

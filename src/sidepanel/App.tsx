@@ -25,6 +25,7 @@ export default function App() {
     input,
     setInput,
     handleSendMessage,
+    handleSendHint,
   } = useChatSession({
     apiKey,
     problemTitle: currentProblem?.title,
@@ -108,6 +109,7 @@ export default function App() {
             hintPrompts={HINT_PROMPTS}
             onChangeInput={setInput}
             onSend={handleSendMessage}
+            onSendHint={handleSendHint}
           />
         ) : (
           <ReviewPane />
