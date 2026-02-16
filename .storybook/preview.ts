@@ -19,8 +19,8 @@ const preview: Preview = {
         dark: {
           name: 'dark',
           value: '#1a1a1a',
-        }
-      }
+        },
+      },
     },
     a11y: {
       // 'todo' - show a11y violations in the test UI only
@@ -32,9 +32,9 @@ const preview: Preview = {
 
   initialGlobals: {
     backgrounds: {
-      value: 'light'
-    }
-  }
+      value: 'light',
+    },
+  },
 };
 
 export default preview;

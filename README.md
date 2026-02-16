@@ -68,6 +68,7 @@ See `/src/test/README.md` for detailed testing guidelines and examples.
 ### Continuous Integration
 
 All tests run automatically on pull requests via GitHub Actions:
+
 - Linting
 - Build verification
 - Unit tests with coverage
@@ -108,12 +109,13 @@ TODO
 - [ ] only nav to bottom on user input, maybe push slightly up on ai input
 - [ ] handle multiline input properly
 - [ ] create a more user friendly response when hitting rate limits
-- [ ] 
+- [ ]
 
 Update 9/30/25: LeetCode has released their own version: Leet 🫡😭
 
 up next:
+
 - [ ] after submit reset internal timer?
 - [ ] fix list rendering
 - [ ] optimize token usage from hint buttons
-- 
+-

@@ -1,4 +1,316 @@
-{"/Users/jesus/Documents/dev/leet-buddy/src/components/ui/card.tsx": {"path":"/Users/jesus/Documents/dev/leet-buddy/src/components/ui/card.tsx","statementMap":{"0":{"start":{"line":6,"column":2},"end":{"line":14,"column":null}},"1":{"start":{"line":19,"column":2},"end":{"line":27,"column":null}},"2":{"start":{"line":32,"column":2},"end":{"line":37,"column":null}},"3":{"start":{"line":42,"column":2},"end":{"line":47,"column":null}},"4":{"start":{"line":52,"column":2},"end":{"line":60,"column":null}},"5":{"start":{"line":65,"column":2},"end":{"line":70,"column":null}},"6":{"start":{"line":75,"column":2},"end":{"line":80,"column":null}}},"fnMap":{"0":{"name":"Card","decl":{"start":{"line":5,"column":9},"end":{"line":5,"column":14}},"loc":{"start":{"line":5,"column":68},"end":{"line":16,"column":null}},"line":5},"1":{"name":"CardHeader","decl":{"start":{"line":18,"column":9},"end":{"line":18,"column":20}},"loc":{"start":{"line":18,"column":74},"end":{"line":29,"column":null}},"line":18},"2":{"name":"CardTitle","decl":{"start":{"line":31,"column":9},"end":{"line":31,"column":19}},"loc":{"start":{"line":31,"column":73},"end":{"line":39,"column":null}},"line":31},"3":{"name":"CardDescription","decl":{"start":{"line":41,"column":9},"end":{"line":41,"column":25}},"loc":{"start":{"line":41,"column":79},"end":{"line":49,"column":null}},"line":41},"4":{"name":"CardAction","decl":{"start":{"line":51,"column":9},"end":{"line":51,"column":20}},"loc":{"start":{"line":51,"column":74},"end":{"line":62,"column":null}},"line":51},"5":{"name":"CardContent","decl":{"start":{"line":64,"column":9},"end":{"line":64,"column":21}},"loc":{"start":{"line":64,"column":75},"end":{"line":72,"column":null}},"line":64},"6":{"name":"CardFooter","decl":{"start":{"line":74,"column":9},"end":{"line":74,"column":20}},"loc":{"start":{"line":74,"column":74},"end":{"line":82,"column":null}},"line":74}},"branchMap":{},"s":{"0":12,"1":0,"2":0,"3":0,"4":0,"5":12,"6":0},"f":{"0":12,"1":0,"2":0,"3":0,"4":0,"5":12,"6":0},"b":{},"meta":{"lastBranch":0,"lastFunction":7,"lastStatement":7,"seen":{"f:5:9:5:14":0,"s:6:2:14:Infinity":0,"f:18:9:18:20":1,"s:19:2:27:Infinity":1,"f:31:9:31:19":2,"s:32:2:37:Infinity":2,"f:41:9:41:25":3,"s:42:2:47:Infinity":3,"f:51:9:51:20":4,"s:52:2:60:Infinity":4,"f:64:9:64:21":5,"s:65:2:70:Infinity":5,"f:74:9:74:20":6,"s:75:2:80:Infinity":6}}}
-,"/Users/jesus/Documents/dev/leet-buddy/src/lib/utils.ts": {"path":"/Users/jesus/Documents/dev/leet-buddy/src/lib/utils.ts","statementMap":{"0":{"start":{"line":5,"column":2},"end":{"line":5,"column":null}}},"fnMap":{"0":{"name":"cn","decl":{"start":{"line":4,"column":16},"end":{"line":4,"column":22}},"loc":{"start":{"line":4,"column":44},"end":{"line":6,"column":null}},"line":4}},"branchMap":{},"s":{"0":60},"f":{"0":60},"b":{},"meta":{"lastBranch":0,"lastFunction":1,"lastStatement":1,"seen":{"f:4:16:4:22":0,"s:5:2:5:Infinity":0}}}
-,"/Users/jesus/Documents/dev/leet-buddy/src/sidepanel/components/ChatMessage.tsx": {"path":"/Users/jesus/Documents/dev/leet-buddy/src/sidepanel/components/ChatMessage.tsx","statementMap":{"0":{"start":{"line":11,"column":17},"end":{"line":11,"column":null}},"1":{"start":{"line":13,"column":2},"end":{"line":46,"column":null}}},"fnMap":{"0":{"name":"ChatMessage","decl":{"start":{"line":10,"column":24},"end":{"line":10,"column":36}},"loc":{"start":{"line":10,"column":67},"end":{"line":48,"column":null}},"line":10}},"branchMap":{"0":{"loc":{"start":{"line":14,"column":36},"end":{"line":14,"column":76}},"type":"cond-expr","locations":[{"start":{"line":14,"column":45},"end":{"line":14,"column":61}},{"start":{"line":14,"column":61},"end":{"line":14,"column":76}}],"line":14},"1":{"loc":{"start":{"line":18,"column":10},"end":{"line":18,"column":null}},"type":"cond-expr","locations":[{"start":{"line":18,"column":19},"end":{"line":18,"column":35}},{"start":{"line":18,"column":35},"end":{"line":18,"column":null}}],"line":18},"2":{"loc":{"start":{"line":24,"column":12},"end":{"line":26,"column":null}},"type":"cond-expr","locations":[{"start":{"line":25,"column":16},"end":{"line":25,"column":null}},{"start":{"line":26,"column":16},"end":{"line":26,"column":null}}],"line":24},"3":{"loc":{"start":{"line":30,"column":13},"end":{"line":41,"column":null}},"type":"cond-expr","locations":[{"start":{"line":31,"column":14},"end":{"line":35,"column":null}},{"start":{"line":36,"column":16},"end":{"line":41,"column":null}}],"line":30},"4":{"loc":{"start":{"line":36,"column":16},"end":{"line":41,"column":null}},"type":"cond-expr","locations":[{"start":{"line":37,"column":14},"end":{"line":37,"column":null}},{"start":{"line":39,"column":14},"end":{"line":41,"column":null}}],"line":36}},"s":{"0":12,"1":12},"f":{"0":12},"b":{"0":[5,7],"1":[5,7],"2":[5,7],"3":[2,10],"4":[5,5]},"meta":{"lastBranch":5,"lastFunction":1,"lastStatement":2,"seen":{"f:10:24:10:36":0,"s:11:17:11:Infinity":0,"s:13:2:46:Infinity":1,"b:14:45:14:61:14:61:14:76":0,"b:18:19:18:35:18:35:18:Infinity":1,"b:25:16:25:Infinity:26:16:26:Infinity":2,"b:31:14:35:Infinity:36:16:41:Infinity":3,"b:37:14:37:Infinity:39:14:41:Infinity":4}}}
+{
+  "/Users/jesus/Documents/dev/leet-buddy/src/components/ui/card.tsx": {
+    "path": "/Users/jesus/Documents/dev/leet-buddy/src/components/ui/card.tsx",
+    "statementMap": {
+      "0": {
+        "start": { "line": 6, "column": 2 },
+        "end": { "line": 14, "column": null }
+      },
+      "1": {
+        "start": { "line": 19, "column": 2 },
+        "end": { "line": 27, "column": null }
+      },
+      "2": {
+        "start": { "line": 32, "column": 2 },
+        "end": { "line": 37, "column": null }
+      },
+      "3": {
+        "start": { "line": 42, "column": 2 },
+        "end": { "line": 47, "column": null }
+      },
+      "4": {
+        "start": { "line": 52, "column": 2 },
+        "end": { "line": 60, "column": null }
+      },
+      "5": {
+        "start": { "line": 65, "column": 2 },
+        "end": { "line": 70, "column": null }
+      },
+      "6": {
+        "start": { "line": 75, "column": 2 },
+        "end": { "line": 80, "column": null }
+      }
+    },
+    "fnMap": {
+      "0": {
+        "name": "Card",
+        "decl": {
+          "start": { "line": 5, "column": 9 },
+          "end": { "line": 5, "column": 14 }
+        },
+        "loc": {
+          "start": { "line": 5, "column": 68 },
+          "end": { "line": 16, "column": null }
+        },
+        "line": 5
+      },
+      "1": {
+        "name": "CardHeader",
+        "decl": {
+          "start": { "line": 18, "column": 9 },
+          "end": { "line": 18, "column": 20 }
+        },
+        "loc": {
+          "start": { "line": 18, "column": 74 },
+          "end": { "line": 29, "column": null }
+        },
+        "line": 18
+      },
+      "2": {
+        "name": "CardTitle",
+        "decl": {
+          "start": { "line": 31, "column": 9 },
+          "end": { "line": 31, "column": 19 }
+        },
+        "loc": {
+          "start": { "line": 31, "column": 73 },
+          "end": { "line": 39, "column": null }
+        },
+        "line": 31
+      },
+      "3": {
+        "name": "CardDescription",
+        "decl": {
+          "start": { "line": 41, "column": 9 },
+          "end": { "line": 41, "column": 25 }
+        },
+        "loc": {
+          "start": { "line": 41, "column": 79 },
+          "end": { "line": 49, "column": null }
+        },
+        "line": 41
+      },
+      "4": {
+        "name": "CardAction",
+        "decl": {
+          "start": { "line": 51, "column": 9 },
+          "end": { "line": 51, "column": 20 }
+        },
+        "loc": {
+          "start": { "line": 51, "column": 74 },
+          "end": { "line": 62, "column": null }
+        },
+        "line": 51
+      },
+      "5": {
+        "name": "CardContent",
+        "decl": {
+          "start": { "line": 64, "column": 9 },
+          "end": { "line": 64, "column": 21 }
+        },
+        "loc": {
+          "start": { "line": 64, "column": 75 },
+          "end": { "line": 72, "column": null }
+        },
+        "line": 64
+      },
+      "6": {
+        "name": "CardFooter",
+        "decl": {
+          "start": { "line": 74, "column": 9 },
+          "end": { "line": 74, "column": 20 }
+        },
+        "loc": {
+          "start": { "line": 74, "column": 74 },
+          "end": { "line": 82, "column": null }
+        },
+        "line": 74
+      }
+    },
+    "branchMap": {},
+    "s": { "0": 12, "1": 0, "2": 0, "3": 0, "4": 0, "5": 12, "6": 0 },
+    "f": { "0": 12, "1": 0, "2": 0, "3": 0, "4": 0, "5": 12, "6": 0 },
+    "b": {},
+    "meta": {
+      "lastBranch": 0,
+      "lastFunction": 7,
+      "lastStatement": 7,
+      "seen": {
+        "f:5:9:5:14": 0,
+        "s:6:2:14:Infinity": 0,
+        "f:18:9:18:20": 1,
+        "s:19:2:27:Infinity": 1,
+        "f:31:9:31:19": 2,
+        "s:32:2:37:Infinity": 2,
+        "f:41:9:41:25": 3,
+        "s:42:2:47:Infinity": 3,
+        "f:51:9:51:20": 4,
+        "s:52:2:60:Infinity": 4,
+        "f:64:9:64:21": 5,
+        "s:65:2:70:Infinity": 5,
+        "f:74:9:74:20": 6,
+        "s:75:2:80:Infinity": 6
+      }
+    }
+  },
+  "/Users/jesus/Documents/dev/leet-buddy/src/lib/utils.ts": {
+    "path": "/Users/jesus/Documents/dev/leet-buddy/src/lib/utils.ts",
+    "statementMap": {
+      "0": {
+        "start": { "line": 5, "column": 2 },
+        "end": { "line": 5, "column": null }
+      }
+    },
+    "fnMap": {
+      "0": {
+        "name": "cn",
+        "decl": {
+          "start": { "line": 4, "column": 16 },
+          "end": { "line": 4, "column": 22 }
+        },
+        "loc": {
+          "start": { "line": 4, "column": 44 },
+          "end": { "line": 6, "column": null }
+        },
+        "line": 4
+      }
+    },
+    "branchMap": {},
+    "s": { "0": 60 },
+    "f": { "0": 60 },
+    "b": {},
+    "meta": {
+      "lastBranch": 0,
+      "lastFunction": 1,
+      "lastStatement": 1,
+      "seen": { "f:4:16:4:22": 0, "s:5:2:5:Infinity": 0 }
+    }
+  },
+  "/Users/jesus/Documents/dev/leet-buddy/src/sidepanel/components/ChatMessage.tsx": {
+    "path": "/Users/jesus/Documents/dev/leet-buddy/src/sidepanel/components/ChatMessage.tsx",
+    "statementMap": {
+      "0": {
+        "start": { "line": 11, "column": 17 },
+        "end": { "line": 11, "column": null }
+      },
+      "1": {
+        "start": { "line": 13, "column": 2 },
+        "end": { "line": 46, "column": null }
+      }
+    },
+    "fnMap": {
+      "0": {
+        "name": "ChatMessage",
+        "decl": {
+          "start": { "line": 10, "column": 24 },
+          "end": { "line": 10, "column": 36 }
+        },
+        "loc": {
+          "start": { "line": 10, "column": 67 },
+          "end": { "line": 48, "column": null }
+        },
+        "line": 10
+      }
+    },
+    "branchMap": {
+      "0": {
+        "loc": {
+          "start": { "line": 14, "column": 36 },
+          "end": { "line": 14, "column": 76 }
+        },
+        "type": "cond-expr",
+        "locations": [
+          {
+            "start": { "line": 14, "column": 45 },
+            "end": { "line": 14, "column": 61 }
+          },
+          {
+            "start": { "line": 14, "column": 61 },
+            "end": { "line": 14, "column": 76 }
+          }
+        ],
+        "line": 14
+      },
+      "1": {
+        "loc": {
+          "start": { "line": 18, "column": 10 },
+          "end": { "line": 18, "column": null }
+        },
+        "type": "cond-expr",
+        "locations": [
+          {
+            "start": { "line": 18, "column": 19 },
+            "end": { "line": 18, "column": 35 }
+          },
+          {
+            "start": { "line": 18, "column": 35 },
+            "end": { "line": 18, "column": null }
+          }
+        ],
+        "line": 18
+      },
+      "2": {
+        "loc": {
+          "start": { "line": 24, "column": 12 },
+          "end": { "line": 26, "column": null }
+        },
+        "type": "cond-expr",
+        "locations": [
+          {
+            "start": { "line": 25, "column": 16 },
+            "end": { "line": 25, "column": null }
+          },
+          {
+            "start": { "line": 26, "column": 16 },
+            "end": { "line": 26, "column": null }
+          }
+        ],
+        "line": 24
+      },
+      "3": {
+        "loc": {
+          "start": { "line": 30, "column": 13 },
+          "end": { "line": 41, "column": null }
+        },
+        "type": "cond-expr",
+        "locations": [
+          {
+            "start": { "line": 31, "column": 14 },
+            "end": { "line": 35, "column": null }
+          },
+          {
+            "start": { "line": 36, "column": 16 },
+            "end": { "line": 41, "column": null }
+          }
+        ],
+        "line": 30
+      },
+      "4": {
+        "loc": {
+          "start": { "line": 36, "column": 16 },
+          "end": { "line": 41, "column": null }
+        },
+        "type": "cond-expr",
+        "locations": [
+          {
+            "start": { "line": 37, "column": 14 },
+            "end": { "line": 37, "column": null }
+          },
+          {
+            "start": { "line": 39, "column": 14 },
+            "end": { "line": 41, "column": null }
+          }
+        ],
+        "line": 36
+      }
+    },
+    "s": { "0": 12, "1": 12 },
+    "f": { "0": 12 },
+    "b": { "0": [5, 7], "1": [5, 7], "2": [5, 7], "3": [2, 10], "4": [5, 5] },
+    "meta": {
+      "lastBranch": 5,
+      "lastFunction": 1,
+      "lastStatement": 2,
+      "seen": {
+        "f:10:24:10:36": 0,
+        "s:11:17:11:Infinity": 0,
+        "s:13:2:46:Infinity": 1,
+        "b:14:45:14:61:14:61:14:76": 0,
+        "b:18:19:18:35:18:35:18:Infinity": 1,
+        "b:25:16:25:Infinity:26:16:26:Infinity": 2,
+        "b:31:14:35:Infinity:36:16:41:Infinity": 3,
+        "b:37:14:37:Infinity:39:14:41:Infinity": 4
+      }
+    }
+  }
 }

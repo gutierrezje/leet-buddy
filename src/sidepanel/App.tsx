@@ -9,7 +9,14 @@ import {
 import { GoogleGenerativeAI, ChatSession } from '@google/generative-ai';
 
 import initialMessages from './data/messages.json';
-import { Message, HintPrompt, CurrentProblem } from '@/shared/types';
+import {
+  Message,
+  HintPrompt,
+  CurrentProblem,
+  isProblemMetadataMessage,
+  isSubmissionAcceptedMessage,
+  isProblemClearedMessage,
+} from '@/shared/types';
 import { TabNavigation } from './components/TabNavigation';
 import ChatPane from './components/ChatPane';
 import ReviewPane from './components/ReviewPane';
@@ -221,38 +228,46 @@ export default function App() {
 
   // Subscribe to messages from content script (when panel is already open)
   useEffect(() => {
-    function handleMessage(msg: {
-      type?: string;
-      title?: string;
-      slug?: string;
-      difficulty?: string;
-      tags?: string[];
-      submissionId?: string;
-      at?: number;
-    }) {
+    function handleMessage(msg: unknown) {
+      // Handle problem cleared (user navigated away from problem page)
+      if (isProblemClearedMessage(msg)) {
+        debug('Problem cleared, resetting state');
+        lastSlugRef.current = null;
+        setCurrentProblem(null);
+        setMessages(initialMessages as Message[]);
+        setChatSession(null);
+        setLoading(false);
+        return;
+      }
+
       // Handle problem metadata updates
-      if (msg.type === 'PROBLEM_METADATA' && msg.slug) {
+      if (isProblemMetadataMessage(msg)) {
         const compact = mapTagsToCompact(msg.tags || []);
+        debug('Received PROBLEM_METADATA for %s', msg.slug);
         debug('compact categories: %O', compact);
+
         if (lastSlugRef.current !== msg.slug) {
+          // New problem or re-entry to different problem
+          debug('New problem detected: %s', msg.slug);
           lastSlugRef.current = msg.slug;
           setMessages(initialMessages as Message[]);
           setChatSession(null); // triggers re-init
           setLoading(true); // Set loading state for new problem
           setCurrentProblem({
             slug: msg.slug,
-            title: msg.title || '',
-            difficulty: msg.difficulty || 'Unknown',
+            title: msg.title,
+            difficulty: msg.difficulty,
             tags: compact,
           });
         } else {
-          // if same slug, update in case stale
+          // Same slug: update metadata (handles re-entry with fresh data)
+          debug('Updating metadata for current problem: %s', msg.slug);
           setCurrentProblem((prev) => {
             if (prev) {
               return {
                 ...prev,
-                title: msg.title || prev.title,
-                difficulty: msg.difficulty || prev.difficulty,
+                title: msg.title,
+                difficulty: msg.difficulty,
                 tags: compact.length > 0 ? compact : prev.tags,
               };
             } else {
@@ -260,10 +275,11 @@ export default function App() {
             }
           });
         }
+        return;
       }
 
       // Handle accepted submissions
-      if (msg.type === 'SUBMISSION_ACCEPTED' && msg.slug) {
+      if (isSubmissionAcceptedMessage(msg)) {
         debug('Auto-detected accepted submission for %s', msg.slug);
 
         chrome.storage.local.get(['currentProblem'], async (data) => {
@@ -278,18 +294,22 @@ export default function App() {
             return; // already recorded
           }
 
-          const endAt = msg.at || Date.now();
+          const endAt = msg.at;
           const elapsedSec = problem.startAt
             ? Math.floor((endAt - problem.startAt) / 1000)
             : 0;
 
           setStoppedSec(elapsedSec);
           setSubmissionSource('auto');
-          setAutoSubmissionId(msg.submissionId || `auto-${endAt}`);
+          setAutoSubmissionId(msg.submissionId);
           setPrevTime(existing?.elapsedSec);
           setSaveOpen(true);
         });
+        return;
       }
+
+      // Log unhandled messages for debugging
+      debug('Unhandled message: %O', msg);
     }
 
     chrome.runtime.onMessage.addListener(handleMessage);

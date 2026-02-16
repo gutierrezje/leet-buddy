@@ -1,4 +1,24 @@
-import { SubmissionStatus, PathInfo, CurrentProblem } from '@/shared/types';
+/**
+ * Content script for LeetCode problem detection and messaging.
+ *
+ * TODO (Technical Debt): Extract testable navigation logic
+ * This file has side effects on import and doesn't export functions,
+ * making it difficult to test directly. Consider refactoring:
+ * 1. Extract to src/content/navigationLogic.ts:
+ *    - computeSlugTransition(), shouldClearCache(), buildMessage()
+ * 2. Test pure functions directly
+ * 3. Keep this file as thin orchestration
+ * See src/test/README.md for details.
+ */
+import {
+  SubmissionStatus,
+  PathInfo,
+  CurrentProblem,
+  ProblemMetadataMessage,
+  SubmissionAcceptedMessage,
+  ProblemClearedMessage,
+  GetCurrentProblemRequest,
+} from '@/shared/types';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import SidebarLauncher from './views/SidebarLauncher';
@@ -47,12 +67,13 @@ function detectSubmissionResult() {
   if (emittedSubmissionKeys.has(key)) return;
   emittedSubmissionKeys.add(key);
 
-  safeSend({
+  const msg: SubmissionAcceptedMessage = {
     type: 'SUBMISSION_ACCEPTED',
     slug: problemSlug,
     submissionId,
     at: Date.now(),
-  });
+  };
+  safeSend(msg);
 }
 
 function parseSlug(path: string = location.pathname): string {
@@ -68,6 +89,7 @@ function getCSRFToken(): string {
 const cache: Record<string, CurrentProblem> = {};
 let currentSlug: string | null = null;
 let inFlightAbort: AbortController | null = null;
+let lastEmittedSlug: string | null = null;
 
 function safeSend(msg: unknown) {
   try {
@@ -142,28 +164,66 @@ async function fetchMeta(
 
 async function handleSlugChange() {
   const slug = parseSlug();
-  if (!slug || slug === currentSlug) return;
+
+  // Handle navigation away from problem page
+  if (!slug) {
+    if (currentSlug !== null) {
+      debug('Left problem page, clearing state');
+      currentSlug = null;
+      // Keep lastEmittedSlug to detect re-entry later
+
+      // Clear storage
+      chrome.storage.local.remove(
+        'currentProblem',
+        () => void chrome.runtime.lastError
+      );
+
+      // Notify sidepanel to clear stale state
+      const msg: ProblemClearedMessage = { type: 'PROBLEM_CLEARED' };
+      safeSend(msg);
+    }
+    return;
+  }
+
+  // Check for re-entry: returning to a problem after leaving (currentSlug was null)
+  const isReEntry = currentSlug === null && slug === lastEmittedSlug;
+
+  // Skip if still on same problem (no change) - prevents repeated fetches on DOM mutations
+  if (slug === currentSlug) {
+    return;
+  }
+
+  if (isReEntry) {
+    debug('Re-entering problem %s, forcing refresh', slug);
+    // Clear cache to force fresh fetch
+    delete cache[slug];
+  }
+
   currentSlug = slug;
 
   // Abort previous fetch (if any)
   if (inFlightAbort) inFlightAbort.abort();
   inFlightAbort = new AbortController();
 
-  // Serve from cache fast
-  if (cache[slug]) {
+  // Serve from cache fast (unless re-entry)
+  if (cache[slug] && !isReEntry) {
     const problem = cache[slug];
 
     // Update startAt if new session
     if (!problem.startAt) {
       problem.startAt = Date.now();
     }
-    const msg = { type: 'PROBLEM_METADATA', ...problem };
+    const msg: ProblemMetadataMessage = {
+      type: 'PROBLEM_METADATA',
+      ...problem,
+    };
     safeSend(msg);
     persistCurrentProblem(problem);
+    lastEmittedSlug = slug;
     return;
   }
 
-  // Fetch once
+  // Fetch once (or refresh on re-entry)
   const problem = await fetchMeta(slug, inFlightAbort.signal);
   if (slug !== currentSlug) return; // navigated away during fetch
 
@@ -180,9 +240,13 @@ async function handleSlugChange() {
     startAt: Date.now(),
   };
 
-  const msg = { type: 'PROBLEM_METADATA', ...finalProblem };
+  const msg: ProblemMetadataMessage = {
+    type: 'PROBLEM_METADATA',
+    ...finalProblem,
+  };
   safeSend(msg);
   persistCurrentProblem(finalProblem);
+  lastEmittedSlug = slug;
 }
 
 function cycle() {
@@ -203,7 +267,8 @@ new MutationObserver(debounced).observe(document.body, {
 });
 
 chrome.runtime.onMessage.addListener((req, _s, send) => {
-  if (req.type === 'GET_CURRENT_PROBLEM') {
+  const msg = req as GetCurrentProblemRequest;
+  if (msg.type === 'GET_CURRENT_PROBLEM') {
     chrome.storage.local.get(['currentProblem'], (d) =>
       send(d.currentProblem || null)
     );

@@ -1,5 +1,3 @@
-import type { SubmissionStatus } from './submitting';
-
 export type MessageRole = 'user' | 'ai' | 'system';
 
 export interface Message {
@@ -18,19 +16,98 @@ export interface HintPrompt {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export type SubmissionResultMessage = {
-  type: 'PROBLEM_SUBMISSION_RESULT';
+// Canonical message types for content script <-> sidepanel communication
+
+export type ProblemMetadataMessage = {
+  type: 'PROBLEM_METADATA';
+  slug: string;
+  title: string;
+  difficulty: string;
+  tags: string[];
+  startAt?: number;
+};
+
+export type SubmissionAcceptedMessage = {
+  type: 'SUBMISSION_ACCEPTED';
   slug: string;
   submissionId: string;
-  status: SubmissionStatus;
   at: number;
 };
 
-export type ProblemAcceptedMessage = {
-  type: 'PROBLEM_ACCEPTED';
-  slug: string;
-  submissionId: string;
-  at: number;
+export type GetCurrentProblemRequest = {
+  type: 'GET_CURRENT_PROBLEM';
 };
 
-export type GetCurrentProblemRequest = { type: 'GET_CURRENT_PROBLEM' };
+export type ProblemClearedMessage = {
+  type: 'PROBLEM_CLEARED';
+};
+
+// Union of all runtime messages
+export type RuntimeMessage =
+  | ProblemMetadataMessage
+  | SubmissionAcceptedMessage
+  | GetCurrentProblemRequest
+  | ProblemClearedMessage;
+
+// Type guards for runtime message validation
+
+export function isProblemMetadataMessage(
+  msg: unknown
+): msg is ProblemMetadataMessage {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    msg.type === 'PROBLEM_METADATA' &&
+    'slug' in msg &&
+    typeof msg.slug === 'string' &&
+    'title' in msg &&
+    typeof msg.title === 'string'
+  );
+}
+
+export function isSubmissionAcceptedMessage(
+  msg: unknown
+): msg is SubmissionAcceptedMessage {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    msg.type === 'SUBMISSION_ACCEPTED' &&
+    'slug' in msg &&
+    typeof msg.slug === 'string' &&
+    'submissionId' in msg &&
+    typeof msg.submissionId === 'string'
+  );
+}
+
+export function isGetCurrentProblemRequest(
+  msg: unknown
+): msg is GetCurrentProblemRequest {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    msg.type === 'GET_CURRENT_PROBLEM'
+  );
+}
+
+export function isProblemClearedMessage(
+  msg: unknown
+): msg is ProblemClearedMessage {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    msg.type === 'PROBLEM_CLEARED'
+  );
+}
+
+export function isRuntimeMessage(msg: unknown): msg is RuntimeMessage {
+  return (
+    isProblemMetadataMessage(msg) ||
+    isSubmissionAcceptedMessage(msg) ||
+    isGetCurrentProblemRequest(msg) ||
+    isProblemClearedMessage(msg)
+  );
+}

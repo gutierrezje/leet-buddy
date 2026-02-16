@@ -27,7 +27,9 @@ pnpm test:coverage
 ## Writing Tests
 
 ### Test File Location
+
 Place test files next to the components they test with a `.test.tsx` extension:
+
 ```
 src/
   components/
@@ -76,12 +78,15 @@ describe('MyComponent', () => {
 ## Available Test Utilities
 
 ### Custom Render
+
 The `render` function from `@/test/test-utils` wraps components with any necessary providers.
 
 ### Chrome API Mocks
+
 The test setup automatically mocks the Chrome extension API. See [setup.ts](./setup.ts) for available mocks.
 
 ### Common Queries
+
 - `getByText()` - Find element by text content
 - `getByRole()` - Find element by ARIA role (preferred)
 - `getByLabelText()` - Find form elements by label
@@ -90,7 +95,9 @@ The test setup automatically mocks the Chrome extension API. See [setup.ts](./se
 - `findBy*()` - Async version for elements that appear later
 
 ### User Event
+
 Use `@testing-library/user-event` for simulating user interactions:
+
 - `user.click(element)` - Click element
 - `user.type(element, 'text')` - Type in input
 - `user.hover(element)` - Hover over element
@@ -106,5 +113,33 @@ Use `@testing-library/user-event` for simulating user interactions:
 
 ## Example Tests
 
-See the following file for examples:
-- [ChatMessage.test.tsx](../sidepanel/components/ChatMessage.test.tsx)
+See the following files for examples:
+
+- [ChatMessage.test.tsx](../sidepanel/components/ChatMessage.test.tsx) - Component unit tests
+- [App.test.tsx](../sidepanel/App.test.tsx) - Component integration tests with message handling
+- [messaging.test.ts](../shared/types/messaging.test.ts) - Type guard unit tests
+
+## Known Limitations & Technical Debt
+
+### Content Script Testing
+
+**Issue**: `src/content/main.tsx` is not directly testable because:
+
+- Functions are not exported
+- Side effects occur on module import (MutationObserver, DOM manipulation)
+- Tightly coupled to Chrome APIs
+
+**Current State**: `src/content/navigation.test.ts` simulates navigation logic with local variables rather than testing actual production code. Tests verify INTENDED behavior but won't catch regressions if `main.tsx` diverges.
+
+**Planned Solution** (tracked as technical debt):
+
+1. Extract core logic to `src/content/navigationLogic.ts`:
+   - `computeSlugTransition(currentSlug, newSlug, lastEmitted)` → `{ isReEntry, shouldSkip }`
+   - `shouldClearCache(isReEntry)` → boolean
+   - `buildMessage(problem, isReEntry)` → RuntimeMessage
+2. Export and test these pure functions directly
+3. Keep `main.tsx` as thin orchestration layer
+
+**Impact**: Medium - Current tests catch most logic bugs, but production code can drift unnoticed.
+
+**Priority**: Low - Address when main.tsx requires significant changes or when bugs occur in navigation logic.
