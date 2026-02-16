@@ -72,7 +72,9 @@ export function isSubmissionAcceptedMessage(
     'slug' in msg &&
     typeof msg.slug === 'string' &&
     'submissionId' in msg &&
-    typeof msg.submissionId === 'string'
+    typeof msg.submissionId === 'string' &&
+    'at' in msg &&
+    typeof msg.at === 'number'
   );
 }
 
