@@ -1,7 +1,90 @@
 import { Blocks, Gauge, LayoutTemplate, Lightbulb } from 'lucide-react';
 import type { HintPrompt } from '@/shared/types';
 
-export const GEMINI_MODEL = 'gemini-2.5-flash';
+export const GEMINI_MODELS = {
+  '2.5-flash': {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: 'Lightning-fast with controllable thinking',
+    supportsThinking: true,
+    thinkingType: 'budget' as const,
+  },
+  '2.5-pro': {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: 'High-capability with adaptive thinking',
+    supportsThinking: true,
+    thinkingType: 'budget' as const,
+  },
+  '3-flash': {
+    id: 'gemini-3-flash-preview',
+    name: 'Gemini 3 Flash',
+    description: 'Latest fast model',
+    supportsThinking: true,
+    thinkingType: 'level' as const,
+  },
+  '3-pro': {
+    id: 'gemini-3-pro-preview',
+    name: 'Gemini 3 Pro',
+    description: 'State-of-the-art reasoning',
+    supportsThinking: true,
+    thinkingType: 'level' as const,
+  },
+} as const;
+
+export type GeminiModelKey = keyof typeof GEMINI_MODELS;
+
+// Thinking levels for Gemini 3 models
+export const THINKING_LEVELS = {
+  minimal: {
+    id: 'minimal',
+    name: 'Minimal',
+    description: 'Fastest, likely no thinking',
+  },
+  low: {
+    id: 'low',
+    name: 'Low',
+    description: 'Light reasoning',
+  },
+  medium: {
+    id: 'medium',
+    name: 'Medium',
+    description: 'Balanced thinking',
+  },
+  high: {
+    id: 'high',
+    name: 'High',
+    description: 'Deep reasoning (slower)',
+  },
+} as const;
+
+export type ThinkingLevel = keyof typeof THINKING_LEVELS;
+
+// Thinking budget presets for Gemini 2.5 models (0-32768 tokens)
+export const THINKING_BUDGETS = {
+  minimal: {
+    value: 1024,
+    name: 'Minimal',
+    description: '~1k tokens (fastest)',
+  },
+  low: {
+    value: 4096,
+    name: 'Low',
+    description: '~4k tokens',
+  },
+  medium: {
+    value: 8192,
+    name: 'Medium',
+    description: '~8k tokens (balanced)',
+  },
+  high: {
+    value: 16384,
+    name: 'High',
+    description: '~16k tokens (slower)',
+  },
+} as const;
+
+export type ThinkingBudgetKey = keyof typeof THINKING_BUDGETS;
 
 export const SYSTEM_PROMPT = `
 You are an expert technical interviewer. Your goal is to help users solve programming problems by guiding them, not by giving them the answers.

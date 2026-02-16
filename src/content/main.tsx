@@ -93,7 +93,7 @@ let lastEmittedSlug: string | null = null;
 
 function isExtensionContextValid(): boolean {
   try {
-    return !!(chrome?.runtime?.id);
+    return !!chrome?.runtime?.id;
   } catch {
     return false;
   }

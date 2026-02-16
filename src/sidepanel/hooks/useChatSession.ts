@@ -1,8 +1,16 @@
-import { type ChatSession, GoogleGenerativeAI } from '@google/generative-ai';
+import { type Chat, GoogleGenAI } from '@google/genai';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { Message } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
-import { GEMINI_MODEL, HINT_SYSTEM_PROMPT, SYSTEM_PROMPT } from '../config';
+import {
+  GEMINI_MODELS,
+  type GeminiModelKey,
+  HINT_SYSTEM_PROMPT,
+  SYSTEM_PROMPT,
+  THINKING_BUDGETS,
+  type ThinkingBudgetKey,
+  type ThinkingLevel,
+} from '../config';
 import initialMessages from '../data/messages.json';
 
 const debug = createLogger('useChatSession');
@@ -47,19 +55,66 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
+function buildThinkingConfig(
+  modelKey: GeminiModelKey,
+  thinkingLevel: ThinkingLevel,
+  thinkingBudget: ThinkingBudgetKey
+): Record<string, unknown> | undefined {
+  const model = GEMINI_MODELS[modelKey];
+  if (!model.supportsThinking) return undefined;
+
+  if (model.thinkingType === 'level') {
+    return { thinkingLevel };
+  }
+  return { thinkingBudget: THINKING_BUDGETS[thinkingBudget].value };
+}
+
+function buildHintThinkingConfig(
+  modelKey: GeminiModelKey
+): Record<string, unknown> | undefined {
+  const model = GEMINI_MODELS[modelKey];
+  if (!model.supportsThinking) return undefined;
+
+  if (model.thinkingType === 'level') {
+    return { thinkingLevel: 'minimal' };
+  }
+  return { thinkingBudget: 1024 };
+}
+
 export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
   const [messages, setMessages] = useState<Message[]>(
     initialMessages as Message[]
   );
-  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  const [chatSession, setChatSession] = useState<Chat | null>(null);
   const [state, dispatch] = useReducer(chatReducer, { status: 'idle' });
   const [input, setInput] = useState('');
-  const genAIRef = useRef<GoogleGenerativeAI | null>(null);
+  const aiRef = useRef<GoogleGenAI | null>(null);
+  const [modelKey, setModelKey] = useState<GeminiModelKey>('2.5-flash');
+  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>('medium');
+  const [thinkingBudget, setThinkingBudget] =
+    useState<ThinkingBudgetKey>('medium');
+
+  // Load model settings from storage
+  useEffect(() => {
+    chrome.storage.local.get(
+      ['geminiModel', 'thinkingLevel', 'thinkingBudget'],
+      (data) => {
+        if (data.geminiModel) {
+          setModelKey(data.geminiModel as GeminiModelKey);
+        }
+        if (data.thinkingLevel) {
+          setThinkingLevel(data.thinkingLevel as ThinkingLevel);
+        }
+        if (data.thinkingBudget) {
+          setThinkingBudget(data.thinkingBudget as ThinkingBudgetKey);
+        }
+      }
+    );
+  }, []);
 
   // Initialize the AI chat session once the key and problem are available
   useEffect(() => {
     if (!apiKey || !problemTitle) {
-      // Reset chat state when problem is cleared or API key is removed
       setChatSession(null);
       setMessages(initialMessages as Message[]);
       dispatch({ type: 'CLEAR' });
@@ -69,32 +124,36 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     debug('Initializing new chat session for problem: %s', problemTitle);
     dispatch({ type: 'INITIALIZE_START' });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    genAIRef.current = genAI;
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const ai = new GoogleGenAI({ apiKey });
+    aiRef.current = ai;
 
+    const modelId = GEMINI_MODELS[modelKey].id;
     const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.`;
+    const thinkingConfig = buildThinkingConfig(
+      modelKey,
+      thinkingLevel,
+      thinkingBudget
+    );
 
-    const newChatSession = model.startChat({
-      systemInstruction: {
-        role: 'user',
-        parts: [{ text: dynamicSystemPrompt }],
+    const newChat = ai.chats.create({
+      model: modelId,
+      config: {
+        systemInstruction: dynamicSystemPrompt,
+        thinkingConfig,
       },
     });
 
-    setChatSession(newChatSession);
+    setChatSession(newChat);
     setMessages(initialMessages as Message[]);
     dispatch({ type: 'INITIALIZE_SUCCESS' });
-  }, [apiKey, problemTitle]);
+  }, [apiKey, problemTitle, modelKey, thinkingLevel, thinkingBudget]);
 
   const handleSendMessage = async (
     messageText: string,
     displayText?: string
   ) => {
-    // use the display text if provided
     const userDisplayMessage = displayText || messageText;
 
-    // prevent sending empty messages or sending while in wrong state
     if (!messageText.trim() || state.status !== 'ready' || !chatSession) {
       return;
     }
@@ -116,7 +175,6 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
 
     dispatch({ type: 'SEND_START', pendingMessageId: aiPlaceholder.id });
 
-    // update the ui with the user's message and the ai's placeholder message
     setMessages((prevMessages) => [
       ...prevMessages,
       userMessage,
@@ -125,9 +183,10 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     setInput('');
 
     try {
-      const result = await chatSession.sendMessage(messageText);
-      const response = result.response;
-      const aiText = response.text();
+      const response = await chatSession.sendMessage({
+        message: messageText,
+      });
+      const aiText = response.text ?? '';
 
       const aiMessage: Message = {
         ...aiPlaceholder,
@@ -157,12 +216,8 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     }
   };
 
-  const handleSendHint = async (
-    hintQuestion: string,
-    displayText: string
-  ) => {
-    // Prevent sending hints while in wrong state or without required context
-    if (state.status !== 'ready' || !genAIRef.current || !problemTitle) {
+  const handleSendHint = async (hintQuestion: string, displayText: string) => {
+    if (state.status !== 'ready' || !aiRef.current || !problemTitle) {
       return;
     }
 
@@ -185,7 +240,6 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
 
     dispatch({ type: 'SEND_START', pendingMessageId: aiPlaceholder.id });
 
-    // Add hint messages to UI
     setMessages((prevMessages) => [
       ...prevMessages,
       userMessage,
@@ -193,20 +247,20 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     ]);
 
     try {
-      // Create a one-off chat session just for this hint
-      const model = genAIRef.current.getGenerativeModel({ model: GEMINI_MODEL });
+      const modelId = GEMINI_MODELS[modelKey].id;
       const hintSystemPrompt = `${HINT_SYSTEM_PROMPT}\n\nThe user is working on: "${problemTitle}"`;
+      const thinkingConfig = buildHintThinkingConfig(modelKey);
 
-      const hintSession = model.startChat({
-        systemInstruction: {
-          role: 'user',
-          parts: [{ text: hintSystemPrompt }],
+      // One-off generation for hints (no conversation history)
+      const response = await aiRef.current.models.generateContent({
+        model: modelId,
+        contents: hintQuestion,
+        config: {
+          systemInstruction: hintSystemPrompt,
+          thinkingConfig,
         },
       });
-
-      const result = await hintSession.sendMessage(hintQuestion);
-      const response = result.response;
-      const aiText = response.text();
+      const aiText = response.text ?? '';
 
       const aiMessage: Message = {
         ...aiPlaceholder,
