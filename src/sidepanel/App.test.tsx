@@ -630,4 +630,117 @@ describe('App Message Handling', () => {
       );
     });
   });
+
+  describe('Stopwatch and Time Tracking', () => {
+    it('initializes stopwatch with elapsed time from startAt (late open scenario)', async () => {
+      // Simulate opening the side panel 15 seconds after the problem was started
+      const fifteenSecondsAgo = Date.now() - 15000;
+
+      mockStorage.get.mockImplementation((_keys, callback) => {
+        callback({
+          apiKey: 'test-api-key',
+          currentProblem: {
+            slug: 'two-sum',
+            title: 'Two Sum',
+            difficulty: 'Easy',
+            tags: ['Array'],
+            startAt: fifteenSecondsAgo,
+          },
+        });
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Two Sum')).toBeInTheDocument();
+      });
+
+      // The stopwatch should display 00:15 (or 00:16 if a tick happened)
+      await waitFor(() => {
+        const timeDisplay = screen.getByText(/00:1[56]/);
+        expect(timeDisplay).toBeInTheDocument();
+      });
+    });
+
+    it('resumes stopwatch when a manual stop is canceled', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+
+      mockStorage.get.mockImplementation((_keys, callback) => {
+        callback({
+          apiKey: 'test-api-key',
+          currentProblem: {
+            slug: 'two-sum',
+            title: 'Two Sum',
+            difficulty: 'Easy',
+            tags: ['Array'],
+            startAt: Date.now(),
+          },
+        });
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Two Sum')).toBeInTheDocument();
+      });
+
+      // Let 2 seconds pass
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      // Click the stop (checkmark) button
+      const getStopButton = () => {
+        const buttons = screen.getAllByRole('button');
+        return buttons.find((b: HTMLElement) =>
+          b.querySelector('.lucide-circle-check-big')
+        );
+      };
+
+      const stopButton = getStopButton();
+      expect(stopButton).toBeDefined();
+
+      await act(async () => {
+        stopButton?.click();
+      });
+
+      // Modal should open
+      await waitFor(() => {
+        expect(screen.getByText(/Mark Complete/i)).toBeInTheDocument();
+      });
+
+      // Stopwatch should be paused (showing Play button now)
+      const getPlayButton = () => {
+        const buttons = screen.getAllByRole('button', { hidden: true });
+        return buttons.find((b: HTMLElement) =>
+          b.querySelector('.lucide-play')
+        );
+      };
+      await waitFor(() => {
+        expect(getPlayButton()).toBeDefined();
+      });
+
+      // Click Cancel on the modal
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      await act(async () => {
+        cancelButton.click();
+      });
+
+      // Modal should close
+      await waitFor(() => {
+        expect(screen.queryByText(/Mark Complete/i)).not.toBeInTheDocument();
+      });
+
+      // Stopwatch should be running again (Play button gone, Pause button back)
+      await waitFor(() => {
+        const buttons = screen.getAllByRole('button');
+        const pauseBtn = buttons.find((b: HTMLElement) =>
+          b.querySelector('.lucide-pause')
+        );
+        expect(pauseBtn).toBeDefined();
+      });
+
+      vi.useRealTimers();
+    });
+  });
 });

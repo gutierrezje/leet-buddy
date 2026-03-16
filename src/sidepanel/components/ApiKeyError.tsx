@@ -20,8 +20,8 @@ export default function ApiKeyError({ onOpenOptions }: ApiKeyErrorProps) {
       </p>
 
       <div className="rounded-md bg-secondary/40 border border-border p-3 mb-5 text-left max-w-[260px] w-full">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-1.5">
-          Get a free key
+        <p className="text-xs text-muted-foreground font-medium mb-1.5">
+          Get a free API key
         </p>
         <a
           href="https://aistudio.google.com/apikey"

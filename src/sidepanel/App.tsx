@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ApiKeyError from './components/ApiKeyError';
 import ChatPane from './components/ChatPane';
 import EmptyState from './components/EmptyState';
@@ -15,6 +15,7 @@ import { useSubmissionFlow } from './hooks/useSubmissionFlow';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
+  const stopwatchSecondsRef = useRef(0);
 
   const { apiKey, loading: apiKeyLoading } = useApiKeyState();
   const { currentProblem, loading: problemLoading } = useProblemContext();
@@ -31,15 +32,23 @@ export default function App() {
     problemTitle: currentProblem?.title,
   });
 
+  const initialElapsed = currentProblem?.startAt
+    ? Math.max(0, Math.floor((Date.now() - currentProblem.startAt) / 1000))
+    : 0;
+
   const {
     saveOpen,
     stoppedSec,
     resetTick,
+    resumeTick,
     prevTime,
     handleStopwatchStop,
     handleCancelSave,
     handleConfirmSave,
-  } = useSubmissionFlow({ currentProblem });
+  } = useSubmissionFlow({
+    currentProblem,
+    getStopwatchElapsed: () => stopwatchSecondsRef.current || initialElapsed,
+  });
 
   const handleOpenOptions = () => {
     chrome.runtime.openOptionsPage();
@@ -86,7 +95,16 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Stopwatch onStop={handleStopwatchStop} resetTrigger={resetTick} />
+            <Stopwatch
+              key={currentProblem?.slug}
+              initialElapsed={initialElapsed}
+              onStop={handleStopwatchStop}
+              onTimeUpdate={(s) => {
+                stopwatchSecondsRef.current = s;
+              }}
+              resetTrigger={resetTick}
+              resumeTrigger={resumeTick}
+            />
             <button
               type="button"
               onClick={handleOpenOptions}

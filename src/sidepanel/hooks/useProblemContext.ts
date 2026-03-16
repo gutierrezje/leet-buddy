@@ -29,6 +29,7 @@ export function useProblemContext() {
             title: cp.title,
             difficulty: cp.difficulty || '',
             tags: compact,
+            startAt: cp.startAt,
           });
           lastSlugRef.current = cp.slug;
         }
@@ -63,6 +64,7 @@ export function useProblemContext() {
             title: msg.title,
             difficulty: msg.difficulty,
             tags: compact,
+            startAt: msg.startAt,
           });
         } else {
           // Same slug: update metadata (handles re-entry with fresh data)

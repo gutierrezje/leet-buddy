@@ -4,20 +4,42 @@ import { cn } from '@/lib/utils';
 import { formatHMS } from '@/shared/utils/time';
 
 type StopwatchProps = {
+  initialElapsed?: number;
   onStop?: (elapsed: number) => void;
+  onTimeUpdate?: (elapsed: number) => void;
   resetTrigger?: number;
+  resumeTrigger?: number;
 };
 
-export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
+export default function Stopwatch({
+  initialElapsed = 0,
+  onStop,
+  onTimeUpdate,
+  resetTrigger,
+  resumeTrigger,
+}: StopwatchProps) {
+  const [isRunning, setIsRunning] = useState(true);
+  const [elapsedTime, setElapsedTime] = useState(initialElapsed);
   const intervalRef = useRef<number | null>(null);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
+
+  useEffect(() => {
+    onTimeUpdateRef.current?.(initialElapsed);
+  }, [initialElapsed]);
 
   useEffect(() => {
     if (!isRunning) return;
 
     intervalRef.current = window.setInterval(() => {
-      setElapsedTime((s) => s + 1);
+      setElapsedTime((s) => {
+        const next = s + 1;
+        onTimeUpdateRef.current?.(next);
+        return next;
+      });
     }, 1000);
 
     return () => {
@@ -28,21 +50,29 @@ export default function Stopwatch({ onStop, resetTrigger }: StopwatchProps) {
     };
   }, [isRunning]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: resetTrigger is a prop that intentionally triggers reset
   useEffect(() => {
+    // Skip the initial mount (resetTrigger=0); only reset on subsequent ticks
+    if (!resetTrigger) return;
     setIsRunning(false);
     setElapsedTime(0);
+    onTimeUpdateRef.current?.(0);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
   }, [resetTrigger]);
 
+  useEffect(() => {
+    if (!resumeTrigger) return;
+    setIsRunning(true);
+  }, [resumeTrigger]);
+
   const handleStart = () => setIsRunning(true);
   const handlePause = () => setIsRunning(false);
 
   const handleReset = () => {
     setElapsedTime(0);
+    onTimeUpdateRef.current?.(0);
     setIsRunning(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
