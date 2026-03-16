@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,38 +24,127 @@ function TimeWheel({
   max?: number;
   label: string;
 }) {
-  const increment = () => {
-    const next = value + 1;
-    onChange(max !== undefined ? (next > max ? 0 : next) : next);
+  const [inputValue, setInputValue] = useState(value.toString());
+  const [isFocused, setIsFocused] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setInputValue(value.toString());
+    }
+  }, [value, isFocused]);
+
+  const stopAction = useCallback(() => {
+    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    if (intervalRef.current) window.clearInterval(intervalRef.current);
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalPointerUp = () => stopAction();
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      stopAction();
+    };
+  }, [stopAction]);
+
+  const step = (direction: 1 | -1) => {
+    setInputValue((prev) => {
+      let num = parseInt(prev, 10);
+      if (Number.isNaN(num)) num = 0;
+      let next = num + direction;
+      if (max !== undefined) {
+        if (next > max) next = 0;
+        else if (next < 0) next = max;
+      } else if (next < 0) {
+        next = 0;
+      }
+      onChange(next);
+      return next.toString();
+    });
   };
-  const decrement = () => {
-    const next = value - 1;
-    onChange(next < 0 ? (max ?? 0) : next);
+
+  const startAction = (direction: 1 | -1) => {
+    step(direction);
+    let ticks = 0;
+
+    timeoutRef.current = window.setTimeout(() => {
+      intervalRef.current = window.setInterval(() => {
+        step(direction);
+        ticks++;
+        if (ticks === 5 && intervalRef.current) {
+          window.clearInterval(intervalRef.current);
+          intervalRef.current = window.setInterval(() => step(direction), 50);
+        }
+      }, 150);
+    }, 500);
   };
-  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  const displayValue = isFocused ? inputValue : inputValue.padStart(2, '0');
 
   return (
     <div className="flex flex-col items-center gap-1">
       <button
         type="button"
-        onClick={increment}
-        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          startAction(1);
+        }}
+        onPointerUp={stopAction}
+        onPointerLeave={stopAction}
+        onPointerCancel={stopAction}
+        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors cursor-pointer select-none touch-none"
       >
         <ChevronUp className="h-4 w-4" />
       </button>
-      <div className="w-12 h-10 rounded-md bg-secondary border border-border flex items-center justify-center">
-        <span className="text-base font-mono tabular-nums text-foreground">
-          {pad(value)}
-        </span>
+      <div className="w-12 h-10 rounded-md bg-secondary border border-border flex items-center justify-center overflow-hidden focus-within:ring-1 focus-within:ring-ring focus-within:border-ring transition-shadow">
+        <input
+          type="text"
+          inputMode="numeric"
+          className="w-full text-center bg-transparent outline-none text-base font-mono tabular-nums text-foreground p-0 m-0 border-none"
+          value={displayValue}
+          onFocus={() => setIsFocused(true)}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '');
+            setInputValue(val);
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            let num = parseInt(inputValue, 10);
+            if (Number.isNaN(num)) num = 0;
+            if (max !== undefined && num > max) num = max;
+            setInputValue(num.toString());
+            onChange(num);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              step(1);
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              step(-1);
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+          }}
+        />
       </div>
       <button
         type="button"
-        onClick={decrement}
-        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          startAction(-1);
+        }}
+        onPointerUp={stopAction}
+        onPointerLeave={stopAction}
+        onPointerCancel={stopAction}
+        className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors cursor-pointer select-none touch-none"
       >
         <ChevronDown className="h-4 w-4" />
       </button>
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground select-none">{label}</span>
     </div>
   );
 }
