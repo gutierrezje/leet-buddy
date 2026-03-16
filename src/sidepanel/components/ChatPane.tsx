@@ -26,11 +26,24 @@ export default function ChatPane({
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const wasFocusedRef = useRef(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: We want to scroll on every message change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    // Refocus if the document has focus and the user was focused on the textarea before
+    if (
+      !loading &&
+      textareaRef.current &&
+      document.hasFocus() &&
+      wasFocusedRef.current
+    ) {
+      textareaRef.current.focus();
+    }
+  }, [loading]);
 
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
@@ -93,6 +106,12 @@ export default function ChatPane({
                 textareaRef.current.style.height = 'auto';
               }
             }
+          }}
+          onFocus={() => {
+            wasFocusedRef.current = true;
+          }}
+          onBlur={() => {
+            wasFocusedRef.current = false;
           }}
           className="flex-1 min-h-[36px] max-h-[120px] rounded-md bg-secondary/50 border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all disabled:opacity-50 resize-none leading-tight"
         />

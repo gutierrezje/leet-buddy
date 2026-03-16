@@ -1,19 +1,8 @@
 @import "../../global.css";
 
-.toggle-button {
-  display: flex;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 9999px;
-  box-shadow:
-    0 1px 3px 0 rgb(0 0 0 / 0.1),
-    0 1px 2px -1px rgb(0 0 0 / 0.1);
-  cursor: pointer;
-  border: none;
-  background-color: var(--primary);
-}
-
-.toggle-button:hover {
-  background-color: var(--primary-darker);
+/* Ensure the launcher button uses the extension theme, not the host page vars */
+#crxjs-app {
+  --primary: oklch(0.75 0.16 55);
+  --primary-foreground: #111;
+  --ring: oklch(0.75 0.16 55);
 }
