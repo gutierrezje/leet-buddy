@@ -13,6 +13,7 @@ type Props = {
   onChangeInput: (v: string) => void;
   onSend: (text: string, displayText?: string) => void;
   onSendHint: (hintQuestion: string, displayText: string) => void;
+  onRequestCodeCapture: () => void;
 };
 
 export default function ChatPane({
@@ -23,6 +24,7 @@ export default function ChatPane({
   onChangeInput,
   onSend,
   onSendHint,
+  onRequestCodeCapture,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -63,9 +65,19 @@ export default function ChatPane({
 
       {/* Hints */}
       <div className="flex-shrink-0 px-4 py-2.5 border-t border-border">
-        <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
-          Quick hints
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
+            Quick hints
+          </span>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onRequestCodeCapture}
+            className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Look at my code
+          </button>
+        </div>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {hintPrompts.map((hint) => {
             const Icon = hint.icon;

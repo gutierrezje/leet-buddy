@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react';
 import { useRef, useState } from 'react';
 import ApiKeyError from './components/ApiKeyError';
 import ChatPane from './components/ChatPane';
+import CodeCaptureDebugWidget from './components/CodeCaptureDebugWidget';
 import EmptyState from './components/EmptyState';
 import ReviewPane from './components/ReviewPane';
 import SaveModal from './components/SaveModal';
@@ -52,6 +53,15 @@ export default function App() {
 
   const handleOpenOptions = () => {
     chrome.runtime.openOptionsPage();
+  };
+
+  const handleRequestCodeCapture = () => {
+    chrome.storage.local.set(
+      {
+        codeSnapshotRequestNonce: Date.now(),
+      },
+      () => void chrome.runtime.lastError
+    );
   };
 
   if (!apiKey && !apiKeyLoading) {
@@ -118,6 +128,10 @@ export default function App() {
 
       <TabNavigation activeTab={activeTab} onChangeTab={setActiveTab} />
 
+      {import.meta.env.DEV ? (
+        <CodeCaptureDebugWidget currentProblemSlug={currentProblem?.slug} />
+      ) : null}
+
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'chat' ? (
           <ChatPane
@@ -128,6 +142,7 @@ export default function App() {
             onChangeInput={setInput}
             onSend={handleSendMessage}
             onSendHint={handleSendHint}
+            onRequestCodeCapture={handleRequestCodeCapture}
           />
         ) : (
           <ReviewPane />

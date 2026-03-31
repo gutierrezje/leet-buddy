@@ -22,6 +22,11 @@ export default defineManifest({
       js: ['src/content/main.tsx'],
       matches: ['https://leetcode.com/*'],
     },
+    {
+      js: ['src/content/pageBridge.ts'],
+      matches: ['https://leetcode.com/*'],
+      world: 'MAIN',
+    },
   ],
   side_panel: {
     default_path: 'src/sidepanel/index.html',

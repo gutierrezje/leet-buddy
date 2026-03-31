@@ -39,11 +39,21 @@ export type ProblemClearedMessage = {
   type: 'PROBLEM_CLEARED';
 };
 
+export type CodeSnapshotMessage = {
+  type: 'CODE_SNAPSHOT';
+  slug: string;
+  code: string;
+  source: 'monaco' | 'textarea' | 'view-lines' | 'pre-code';
+  language?: string;
+  at: number;
+};
+
 // Union of all runtime messages
 export type RuntimeMessage =
   | ProblemMetadataMessage
   | SubmissionAcceptedMessage
-  | ProblemClearedMessage;
+  | ProblemClearedMessage
+  | CodeSnapshotMessage;
 
 // Type guards for runtime message validation
 
@@ -87,5 +97,24 @@ export function isProblemClearedMessage(
     msg !== null &&
     'type' in msg &&
     msg.type === 'PROBLEM_CLEARED'
+  );
+}
+
+export function isCodeSnapshotMessage(
+  msg: unknown
+): msg is CodeSnapshotMessage {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    msg.type === 'CODE_SNAPSHOT' &&
+    'slug' in msg &&
+    typeof msg.slug === 'string' &&
+    'code' in msg &&
+    typeof msg.code === 'string' &&
+    'source' in msg &&
+    typeof msg.source === 'string' &&
+    'at' in msg &&
+    typeof msg.at === 'number'
   );
 }

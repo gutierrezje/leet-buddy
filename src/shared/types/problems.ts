@@ -6,6 +6,14 @@ export type CurrentProblem = {
   startAt?: number;
 };
 
+export type CurrentCodeSnapshot = {
+  slug: string;
+  code: string;
+  source: 'monaco' | 'textarea' | 'view-lines' | 'pre-code';
+  language?: string;
+  at: number;
+};
+
 export type TopicStats = {
   topic: string;
   totalProblems: number;

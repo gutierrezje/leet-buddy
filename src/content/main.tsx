@@ -14,6 +14,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type {
+  CodeSnapshotMessage,
+  CurrentCodeSnapshot,
   CurrentProblem,
   PathInfo,
   ProblemClearedMessage,
@@ -55,6 +57,210 @@ function readSubmissionStatus(): SubmissionStatus | null {
 }
 
 const emittedSubmissionKeys = new Set<string>();
+const lastCodeSnapshotFingerprintBySlug: Record<string, string> = {};
+const monacoSnapshotSeenBySlug: Record<string, boolean> = {};
+let latestPageMonacoSnapshot: CurrentCodeSnapshot | null = null;
+
+const MAX_CODE_SNAPSHOT_CHARS = 120_000;
+const PAGE_BRIDGE_SOURCE = 'LEETBUDDY_PAGE_BRIDGE';
+const PAGE_MONACO_REQUEST = 'LEETBUDDY_MONACO_REQUEST';
+const PAGE_MONACO_RESPONSE = 'LEETBUDDY_MONACO_RESPONSE';
+const PAGE_SNAPSHOT_STALE_AFTER_MS = 5000;
+
+function normalizeCode(value: string): string {
+  return value
+    .replace(/\u00a0/g, ' ')
+    .replace(/\u200b/g, '')
+    .replace(/\r\n/g, '\n')
+    .trim();
+}
+
+function simpleHash(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 33) ^ input.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function requestPageMonacoSnapshot(slug: string) {
+  window.postMessage(
+    {
+      source: PAGE_BRIDGE_SOURCE,
+      type: PAGE_MONACO_REQUEST,
+      slug,
+    },
+    '*'
+  );
+}
+
+function handlePageBridgeMessage(event: MessageEvent) {
+  if (event.source !== window) return;
+  const data = event.data as
+    | {
+        source?: string;
+        type?: string;
+        slug?: string;
+        code?: string;
+        language?: string;
+        at?: number;
+      }
+    | undefined;
+
+  if (!data) return;
+  if (data.source !== PAGE_BRIDGE_SOURCE) return;
+  if (data.type !== PAGE_MONACO_RESPONSE) return;
+  if (typeof data.slug !== 'string') return;
+  if (typeof data.code !== 'string') return;
+
+  const normalized = normalizeCode(data.code);
+  if (!normalized) return;
+
+  latestPageMonacoSnapshot = {
+    slug: data.slug,
+    code: normalized.slice(0, MAX_CODE_SNAPSHOT_CHARS),
+    source: 'monaco',
+    language: typeof data.language === 'string' ? data.language : undefined,
+    at: typeof data.at === 'number' ? data.at : Date.now(),
+  };
+}
+
+function getRecentPageMonacoSnapshot(slug: string): CurrentCodeSnapshot | null {
+  if (!latestPageMonacoSnapshot) return null;
+  if (latestPageMonacoSnapshot.slug !== slug) return null;
+  if (Date.now() - latestPageMonacoSnapshot.at > PAGE_SNAPSHOT_STALE_AFTER_MS) {
+    return null;
+  }
+  return latestPageMonacoSnapshot;
+}
+
+function extractCodeSnapshot(slug: string): CurrentCodeSnapshot | null {
+  type MonacoModelLike = {
+    getValue?: () => string;
+    getLanguageId?: () => string;
+  };
+
+  type MonacoGlobal = {
+    editor?: {
+      getModels?: () => MonacoModelLike[];
+    };
+  };
+
+  const windowWithMonaco = window as unknown as { monaco?: MonacoGlobal };
+  const monacoModels = windowWithMonaco.monaco?.editor?.getModels?.();
+  if (monacoModels?.length) {
+    const primary = monacoModels[0];
+    const code = normalizeCode(primary.getValue?.() || '');
+    if (code) {
+      return {
+        slug,
+        code: code.slice(0, MAX_CODE_SNAPSHOT_CHARS),
+        source: 'monaco',
+        language: primary.getLanguageId?.(),
+        at: Date.now(),
+      };
+    }
+  }
+
+  const textarea = document.querySelector<HTMLTextAreaElement>(
+    'textarea.inputarea, textarea[data-mode-id], textarea[aria-label*="editor" i], textarea[aria-label*="code" i]'
+  );
+  if (textarea) {
+    const code = normalizeCode(textarea.value || textarea.textContent || '');
+    if (code) {
+      return {
+        slug,
+        code: code.slice(0, MAX_CODE_SNAPSHOT_CHARS),
+        source: 'textarea',
+        at: Date.now(),
+      };
+    }
+  }
+
+  const viewLines = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '.monaco-editor .view-lines .view-line'
+    )
+  )
+    .map((line) => line.textContent || '')
+    .join('\n');
+  const viewLinesCode = normalizeCode(viewLines);
+  if (viewLinesCode) {
+    return {
+      slug,
+      code: viewLinesCode.slice(0, MAX_CODE_SNAPSHOT_CHARS),
+      source: 'view-lines',
+      at: Date.now(),
+    };
+  }
+
+  const preCode = document.querySelector('pre code');
+  const preCodeText = normalizeCode(preCode?.textContent || '');
+  if (preCodeText) {
+    return {
+      slug,
+      code: preCodeText.slice(0, MAX_CODE_SNAPSHOT_CHARS),
+      source: 'pre-code',
+      at: Date.now(),
+    };
+  }
+
+  return null;
+}
+
+function persistCurrentCodeSnapshot(snapshot: CurrentCodeSnapshot) {
+  if (!isExtensionContextValid()) return;
+  try {
+    chrome.storage.local.set(
+      {
+        currentCodeSnapshot: snapshot,
+      },
+      () => void chrome.runtime.lastError
+    );
+  } catch (e) {
+    debug('Failed to persist code snapshot: %O', e);
+  }
+}
+
+function detectCodeSnapshot() {
+  const slug = parseSlug();
+  if (!slug) return;
+
+  requestPageMonacoSnapshot(slug);
+
+  const snapshot =
+    getRecentPageMonacoSnapshot(slug) || extractCodeSnapshot(slug);
+  if (!snapshot) return;
+
+  if (snapshot.source !== 'monaco' && monacoSnapshotSeenBySlug[slug]) {
+    return;
+  }
+
+  if (snapshot.source === 'monaco') {
+    monacoSnapshotSeenBySlug[slug] = true;
+  }
+
+  const fingerprint = `${snapshot.language || ''}:${snapshot.code.length}:${simpleHash(snapshot.code)}`;
+  if (lastCodeSnapshotFingerprintBySlug[slug] === fingerprint) return;
+  lastCodeSnapshotFingerprintBySlug[slug] = fingerprint;
+
+  const msg: CodeSnapshotMessage = {
+    type: 'CODE_SNAPSHOT',
+    ...snapshot,
+  };
+
+  safeSend(msg);
+  persistCurrentCodeSnapshot(snapshot);
+}
+
+function handleCodeCaptureRequest(
+  changes: Record<string, chrome.storage.StorageChange>,
+  area: string
+) {
+  if (area !== 'local') return;
+  if (typeof changes.codeSnapshotRequestNonce?.newValue !== 'number') return;
+  detectCodeSnapshot();
+}
 
 function detectSubmissionResult() {
   const { problemSlug, submissionId } = parsePath();
@@ -66,6 +272,9 @@ function detectSubmissionResult() {
   const key = `${problemSlug}#${submissionId}`;
   if (emittedSubmissionKeys.has(key)) return;
   emittedSubmissionKeys.add(key);
+
+  // Capture code once when an accepted submission is detected.
+  detectCodeSnapshot();
 
   const msg: SubmissionAcceptedMessage = {
     type: 'SUBMISSION_ACCEPTED',
@@ -192,6 +401,10 @@ async function handleSlugChange() {
             'currentProblem',
             () => void chrome.runtime.lastError
           );
+          chrome.storage.local.remove(
+            'currentCodeSnapshot',
+            () => void chrome.runtime.lastError
+          );
         } catch (e) {
           debug('Failed to clear storage: %O', e);
         }
@@ -279,6 +492,8 @@ function debounced() {
   debounceTimer = window.setTimeout(cycle, 120);
 }
 
+window.addEventListener('message', handlePageBridgeMessage);
+chrome.storage.onChanged.addListener(handleCodeCaptureRequest);
 cycle();
 new MutationObserver(debounced).observe(document.body, {
   childList: true,
