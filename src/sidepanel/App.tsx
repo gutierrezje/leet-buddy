@@ -28,8 +28,10 @@ export default function App() {
     setInput,
     handleSendMessage,
     handleSendHint,
+    clearCurrentProblemHistory,
   } = useChatSession({
     apiKey,
+    problemSlug: currentProblem?.slug,
     problemTitle: currentProblem?.title,
   });
 
@@ -143,6 +145,7 @@ export default function App() {
             onSend={handleSendMessage}
             onSendHint={handleSendHint}
             onRequestCodeCapture={handleRequestCodeCapture}
+            onClearHistory={clearCurrentProblemHistory}
           />
         ) : (
           <ReviewPane />

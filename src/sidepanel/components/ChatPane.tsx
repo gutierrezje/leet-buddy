@@ -14,6 +14,7 @@ type Props = {
   onSend: (text: string, displayText?: string) => void;
   onSendHint: (hintQuestion: string, displayText: string) => void;
   onRequestCodeCapture: () => void;
+  onClearHistory: () => void;
 };
 
 export default function ChatPane({
@@ -25,6 +26,7 @@ export default function ChatPane({
   onSend,
   onSendHint,
   onRequestCodeCapture,
+  onClearHistory,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,14 +71,24 @@ export default function ChatPane({
           <span className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
             Quick hints
           </span>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onRequestCodeCapture}
-            className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Look at my code
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onRequestCodeCapture}
+              className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Look at my code
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onClearHistory}
+              className="inline-flex items-center rounded-md border border-border/60 bg-secondary/20 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Clear chat
+            </button>
+          </div>
         </div>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {hintPrompts.map((hint) => {

@@ -1,5 +1,11 @@
 import { type Chat, GoogleGenAI } from '@google/genai';
 import { useEffect, useReducer, useRef, useState } from 'react';
+import {
+  CHAT_HISTORY_INDEX_KEY,
+  getChatHistoryKey,
+  MAX_CHAT_HISTORY_PROBLEMS,
+  MAX_MESSAGES_PER_PROBLEM,
+} from '@/shared/chatHistory';
 import type { Message } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 import {
@@ -17,6 +23,7 @@ const debug = createLogger('useChatSession');
 
 interface UseChatSessionProps {
   apiKey: string;
+  problemSlug: string | undefined;
   problemTitle: string | undefined;
 }
 
@@ -81,7 +88,70 @@ function buildHintThinkingConfig(
   return { thinkingBudget: 1024 };
 }
 
-export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
+type HistoryIndexEntry = {
+  slug: string;
+  lastAccessedAt: number;
+};
+
+function sanitizeHistoryMessages(value: unknown): Message[] {
+  if (!Array.isArray(value)) return [];
+
+  const safeMessages = value.filter(
+    (msg): msg is Message =>
+      typeof msg === 'object' &&
+      msg !== null &&
+      typeof msg.id === 'string' &&
+      typeof msg.sender === 'string' &&
+      typeof msg.text === 'string' &&
+      typeof msg.timestamp === 'number'
+  );
+
+  return safeMessages.slice(-MAX_MESSAGES_PER_PROBLEM);
+}
+
+function sanitizeHistoryIndex(value: unknown): HistoryIndexEntry[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(
+      (entry): entry is HistoryIndexEntry =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof entry.slug === 'string' &&
+        typeof entry.lastAccessedAt === 'number'
+    )
+    .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt);
+}
+
+function upsertHistoryIndex(
+  currentIndex: HistoryIndexEntry[],
+  problemSlug: string
+): HistoryIndexEntry[] {
+  const now = Date.now();
+  const withoutSlug = currentIndex.filter(
+    (entry) => entry.slug !== problemSlug
+  );
+  return [{ slug: problemSlug, lastAccessedAt: now }, ...withoutSlug].slice(
+    0,
+    MAX_CHAT_HISTORY_PROBLEMS
+  );
+}
+
+function getEvictedSlugs(
+  previousIndex: HistoryIndexEntry[],
+  nextIndex: HistoryIndexEntry[]
+): string[] {
+  const nextSet = new Set(nextIndex.map((entry) => entry.slug));
+  return previousIndex
+    .map((entry) => entry.slug)
+    .filter((slug) => !nextSet.has(slug));
+}
+
+export function useChatSession({
+  apiKey,
+  problemSlug,
+  problemTitle,
+}: UseChatSessionProps) {
   const [messages, setMessages] = useState<Message[]>(
     initialMessages as Message[]
   );
@@ -93,6 +163,50 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>('medium');
   const [thinkingBudget, setThinkingBudget] =
     useState<ThinkingBudgetKey>('medium');
+
+  useEffect(() => {
+    if (!problemSlug) return;
+
+    const historyKey = getChatHistoryKey(problemSlug);
+    chrome.storage.local.get([historyKey], (data) => {
+      const safeMessages = sanitizeHistoryMessages(data[historyKey]);
+      if (safeMessages.length === 0) {
+        setMessages(initialMessages as Message[]);
+        return;
+      }
+
+      setMessages(safeMessages);
+    });
+  }, [problemSlug]);
+
+  useEffect(() => {
+    if (!problemSlug) return;
+    const historyKey = getChatHistoryKey(problemSlug);
+
+    chrome.storage.local.get([CHAT_HISTORY_INDEX_KEY], (data) => {
+      const currentIndex = sanitizeHistoryIndex(data[CHAT_HISTORY_INDEX_KEY]);
+      const nextIndex = upsertHistoryIndex(currentIndex, problemSlug);
+      const evictedSlugs = getEvictedSlugs(currentIndex, nextIndex);
+
+      const payload: Record<string, unknown> = {
+        [historyKey]: messages.slice(-MAX_MESSAGES_PER_PROBLEM),
+        [CHAT_HISTORY_INDEX_KEY]: nextIndex,
+      };
+
+      chrome.storage.local.set(payload, () => {
+        if (chrome.runtime.lastError) return;
+        if (evictedSlugs.length === 0) return;
+
+        const keysToRemove = evictedSlugs.map((slug) =>
+          getChatHistoryKey(slug)
+        );
+        chrome.storage.local.remove(
+          keysToRemove,
+          () => void chrome.runtime.lastError
+        );
+      });
+    });
+  }, [problemSlug, messages]);
 
   // Load model settings from storage
   useEffect(() => {
@@ -116,7 +230,6 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
   useEffect(() => {
     if (!apiKey || !problemTitle) {
       setChatSession(null);
-      setMessages(initialMessages as Message[]);
       dispatch({ type: 'CLEAR' });
       return;
     }
@@ -144,7 +257,6 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     });
 
     setChatSession(newChat);
-    setMessages(initialMessages as Message[]);
     dispatch({ type: 'INITIALIZE_SUCCESS' });
   }, [apiKey, problemTitle, modelKey, thinkingLevel, thinkingBudget]);
 
@@ -293,6 +405,18 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
   // Derive loading flag from state for backward compatibility
   const loading = state.status === 'initializing' || state.status === 'sending';
 
+  const clearCurrentProblemHistory = () => {
+    if (!problemSlug) return;
+
+    const historyKey = getChatHistoryKey(problemSlug);
+    chrome.storage.local.remove(
+      historyKey,
+      () => void chrome.runtime.lastError
+    );
+    const seed = initialMessages as Message[];
+    setMessages(seed);
+  };
+
   return {
     messages,
     loading,
@@ -300,5 +424,6 @@ export function useChatSession({ apiKey, problemTitle }: UseChatSessionProps) {
     setInput,
     handleSendMessage,
     handleSendHint,
+    clearCurrentProblemHistory,
   };
 }
