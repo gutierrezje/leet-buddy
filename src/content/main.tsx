@@ -123,6 +123,8 @@ function handlePageBridgeMessage(event: MessageEvent) {
     language: typeof data.language === 'string' ? data.language : undefined,
     at: typeof data.at === 'number' ? data.at : Date.now(),
   };
+
+  maybeEmitCodeSnapshot(latestPageMonacoSnapshot);
 }
 
 function getRecentPageMonacoSnapshot(slug: string): CurrentCodeSnapshot | null {
@@ -132,6 +134,30 @@ function getRecentPageMonacoSnapshot(slug: string): CurrentCodeSnapshot | null {
     return null;
   }
   return latestPageMonacoSnapshot;
+}
+
+function maybeEmitCodeSnapshot(snapshot: CurrentCodeSnapshot) {
+  const slug = snapshot.slug;
+
+  if (snapshot.source !== 'monaco' && monacoSnapshotSeenBySlug[slug]) {
+    return;
+  }
+
+  if (snapshot.source === 'monaco') {
+    monacoSnapshotSeenBySlug[slug] = true;
+  }
+
+  const fingerprint = `${snapshot.language || ''}:${snapshot.code.length}:${simpleHash(snapshot.code)}`;
+  if (lastCodeSnapshotFingerprintBySlug[slug] === fingerprint) return;
+  lastCodeSnapshotFingerprintBySlug[slug] = fingerprint;
+
+  const msg: CodeSnapshotMessage = {
+    type: 'CODE_SNAPSHOT',
+    ...snapshot,
+  };
+
+  safeSend(msg);
+  persistCurrentCodeSnapshot(snapshot);
 }
 
 function extractCodeSnapshot(slug: string): CurrentCodeSnapshot | null {
@@ -228,29 +254,23 @@ function detectCodeSnapshot() {
 
   requestPageMonacoSnapshot(slug);
 
-  const snapshot =
-    getRecentPageMonacoSnapshot(slug) || extractCodeSnapshot(slug);
-  if (!snapshot) return;
-
-  if (snapshot.source !== 'monaco' && monacoSnapshotSeenBySlug[slug]) {
+  const recentMonaco = getRecentPageMonacoSnapshot(slug);
+  if (recentMonaco) {
+    maybeEmitCodeSnapshot(recentMonaco);
     return;
   }
 
-  if (snapshot.source === 'monaco') {
-    monacoSnapshotSeenBySlug[slug] = true;
-  }
+  window.setTimeout(() => {
+    const delayedMonaco = getRecentPageMonacoSnapshot(slug);
+    if (delayedMonaco) {
+      maybeEmitCodeSnapshot(delayedMonaco);
+      return;
+    }
 
-  const fingerprint = `${snapshot.language || ''}:${snapshot.code.length}:${simpleHash(snapshot.code)}`;
-  if (lastCodeSnapshotFingerprintBySlug[slug] === fingerprint) return;
-  lastCodeSnapshotFingerprintBySlug[slug] = fingerprint;
-
-  const msg: CodeSnapshotMessage = {
-    type: 'CODE_SNAPSHOT',
-    ...snapshot,
-  };
-
-  safeSend(msg);
-  persistCurrentCodeSnapshot(snapshot);
+    const fallbackSnapshot = extractCodeSnapshot(slug);
+    if (!fallbackSnapshot) return;
+    maybeEmitCodeSnapshot(fallbackSnapshot);
+  }, 150);
 }
 
 function handleCodeCaptureRequest(

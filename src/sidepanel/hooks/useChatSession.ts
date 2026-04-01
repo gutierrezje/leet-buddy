@@ -6,7 +6,7 @@ import {
   MAX_CHAT_HISTORY_PROBLEMS,
   MAX_MESSAGES_PER_PROBLEM,
 } from '@/shared/chatHistory';
-import type { Message } from '@/shared/types';
+import type { CurrentCodeSnapshot, Message } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 import {
   GEMINI_MODELS,
@@ -262,7 +262,8 @@ export function useChatSession({
 
   const handleSendMessage = async (
     messageText: string,
-    displayText?: string
+    displayText?: string,
+    options?: { codeSnapshot?: CurrentCodeSnapshot }
   ) => {
     const userDisplayMessage = displayText || messageText;
 
@@ -295,8 +296,25 @@ export function useChatSession({
     setInput('');
 
     try {
+      const attachedCode = options?.codeSnapshot;
+      const messageForModel = attachedCode
+        ? [
+            'Code context for this turn:',
+            `Problem slug: ${attachedCode.slug}`,
+            `Language: ${attachedCode.language || 'unknown'}`,
+            `Captured from: ${attachedCode.source}`,
+            `Captured at: ${new Date(attachedCode.at).toISOString()}`,
+            '',
+            '```',
+            attachedCode.code,
+            '```',
+            '',
+            `User request: ${messageText}`,
+          ].join('\n')
+        : messageText;
+
       const response = await chatSession.sendMessage({
-        message: messageText,
+        message: messageForModel,
       });
       const aiText = response.text ?? '';
 

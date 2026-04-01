@@ -1,5 +1,6 @@
 import { Settings } from 'lucide-react';
 import { useRef, useState } from 'react';
+import type { CurrentCodeSnapshot } from '@/shared/types';
 import ApiKeyError from './components/ApiKeyError';
 import ChatPane from './components/ChatPane';
 import CodeCaptureDebugWidget from './components/CodeCaptureDebugWidget';
@@ -16,6 +17,10 @@ import { useSubmissionFlow } from './hooks/useSubmissionFlow';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
+  const [attachCodeNext, setAttachCodeNext] = useState(false);
+  const [attachCodeBusy, setAttachCodeBusy] = useState(false);
+  const [attachedSnapshot, setAttachedSnapshot] =
+    useState<CurrentCodeSnapshot | null>(null);
   const stopwatchSecondsRef = useRef(0);
 
   const { apiKey, loading: apiKeyLoading } = useApiKeyState();
@@ -57,13 +62,54 @@ export default function App() {
     chrome.runtime.openOptionsPage();
   };
 
-  const handleRequestCodeCapture = () => {
+  const handleToggleCodeAttach = () => {
+    if (attachCodeNext) {
+      setAttachCodeNext(false);
+      return;
+    }
+
+    if (!currentProblem?.slug) return;
+
+    setAttachCodeBusy(true);
+    const nonce = Date.now();
     chrome.storage.local.set(
       {
-        codeSnapshotRequestNonce: Date.now(),
+        codeSnapshotRequestNonce: nonce,
       },
-      () => void chrome.runtime.lastError
+      () => {
+        if (chrome.runtime.lastError) {
+          setAttachCodeBusy(false);
+          return;
+        }
+
+        window.setTimeout(() => {
+          chrome.storage.local.get(['currentCodeSnapshot'], (data) => {
+            const snapshot = data.currentCodeSnapshot as
+              | CurrentCodeSnapshot
+              | undefined;
+            if (snapshot?.slug === currentProblem.slug && snapshot.code) {
+              setAttachedSnapshot(snapshot);
+              setAttachCodeNext(true);
+            }
+            setAttachCodeBusy(false);
+          });
+        }, 200);
+      }
     );
+  };
+
+  const handleSend = (text: string, displayText?: string) => {
+    const payload =
+      attachCodeNext && attachedSnapshot
+        ? {
+            codeSnapshot: attachedSnapshot,
+          }
+        : undefined;
+
+    handleSendMessage(text, displayText, payload);
+    if (attachCodeNext) {
+      setAttachCodeNext(false);
+    }
   };
 
   if (!apiKey && !apiKeyLoading) {
@@ -142,9 +188,11 @@ export default function App() {
             loading={chatLoading}
             hintPrompts={HINT_PROMPTS}
             onChangeInput={setInput}
-            onSend={handleSendMessage}
+            onSend={handleSend}
             onSendHint={handleSendHint}
-            onRequestCodeCapture={handleRequestCodeCapture}
+            codeAttachEnabled={attachCodeNext}
+            codeAttachBusy={attachCodeBusy}
+            onToggleCodeAttach={handleToggleCodeAttach}
             onClearHistory={clearCurrentProblemHistory}
           />
         ) : (

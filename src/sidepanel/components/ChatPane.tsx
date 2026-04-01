@@ -10,10 +10,12 @@ type Props = {
   input: string;
   loading: boolean;
   hintPrompts: HintPrompt[];
+  codeAttachEnabled: boolean;
+  codeAttachBusy: boolean;
   onChangeInput: (v: string) => void;
   onSend: (text: string, displayText?: string) => void;
   onSendHint: (hintQuestion: string, displayText: string) => void;
-  onRequestCodeCapture: () => void;
+  onToggleCodeAttach: () => void;
   onClearHistory: () => void;
 };
 
@@ -22,10 +24,12 @@ export default function ChatPane({
   input,
   loading,
   hintPrompts,
+  codeAttachEnabled,
+  codeAttachBusy,
   onChangeInput,
   onSend,
   onSendHint,
-  onRequestCodeCapture,
+  onToggleCodeAttach,
   onClearHistory,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -74,11 +78,15 @@ export default function ChatPane({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={loading}
-              onClick={onRequestCodeCapture}
-              className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              disabled={loading || codeAttachBusy}
+              onClick={onToggleCodeAttach}
+              className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] transition-colors disabled:opacity-40 disabled:pointer-events-none ${
+                codeAttachEnabled
+                  ? 'border-primary/50 bg-primary/15 text-primary hover:bg-primary/20'
+                  : 'border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+              }`}
             >
-              Look at my code
+              {codeAttachEnabled ? 'Code attached' : 'Attach code'}
             </button>
             <button
               type="button"
