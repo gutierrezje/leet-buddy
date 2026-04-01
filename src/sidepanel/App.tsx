@@ -26,6 +26,7 @@ export default function App() {
   const [attachCodeBusy, setAttachCodeBusy] = useState(false);
   const [attachedSnapshot, setAttachedSnapshot] =
     useState<CurrentCodeSnapshot | null>(null);
+  const attachRequestIdRef = useRef(0);
   const stopwatchSecondsRef = useRef(0);
   const hasStopwatchValueRef = useRef(false);
   const lastStopwatchProblemSlugRef = useRef<string | undefined>(undefined);
@@ -167,9 +168,15 @@ export default function App() {
     if (!currentProblem?.slug) return;
 
     if (attachCodeNext) {
+      attachRequestIdRef.current += 1;
       setAttachCodeNext(false);
+      setAttachedSnapshot(null);
+      setAttachCodeBusy(false);
+      return;
     }
 
+    const requestId = attachRequestIdRef.current + 1;
+    attachRequestIdRef.current = requestId;
     setAttachCodeBusy(true);
     const nonce = Date.now();
     chrome.storage.local.set(
@@ -184,6 +191,9 @@ export default function App() {
 
         window.setTimeout(() => {
           chrome.storage.local.get(['currentCodeSnapshot'], (data) => {
+            if (attachRequestIdRef.current !== requestId) {
+              return;
+            }
             const snapshot = data.currentCodeSnapshot as
               | CurrentCodeSnapshot
               | undefined;
