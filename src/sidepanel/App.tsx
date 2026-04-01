@@ -200,6 +200,11 @@ export default function App() {
     }
   };
 
+  const handleClearChatAndInterviewState = () => {
+    clearCurrentProblemHistory();
+    resetSession();
+  };
+
   const handleAdvanceStageFromUi = () => {
     if (!chatReady) return;
     const from = interviewSession?.stage;
@@ -307,7 +312,7 @@ export default function App() {
             codeAttachEnabled={attachCodeNext}
             codeAttachBusy={attachCodeBusy}
             onToggleCodeAttach={handleToggleCodeAttach}
-            onClearHistory={clearCurrentProblemHistory}
+            onClearHistory={handleClearChatAndInterviewState}
           />
         ) : activeTab === 'interview' ? (
           interviewSession ? (
