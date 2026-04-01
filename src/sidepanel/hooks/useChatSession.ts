@@ -563,6 +563,9 @@ export function useChatSession({
       modelKey,
       modelId,
       chat: newChat,
+      ai,
+      systemInstruction: dynamicSystemPrompt,
+      toolDeclarations: INTERVIEW_TOOL_DECLARATIONS,
     });
     dispatch({ type: 'INITIALIZE_SUCCESS' });
   }, [
@@ -650,15 +653,48 @@ export function useChatSession({
         };
       }
 
+      const normalized = filtered.map((patch) => {
+        const existing = interviewChecklistRef.current.find(
+          (item) => item.id === patch.itemId
+        );
+        if (!existing) return patch;
+
+        if (
+          patch.status === 'done' &&
+          patch.itemId === 'before_constraints' &&
+          existing.status !== 'done'
+        ) {
+          const evidenceText = (patch.evidence ?? '').toLowerCase();
+          const mentionsConstraint =
+            evidenceText.includes('constraint') ||
+            evidenceText.includes('time') ||
+            evidenceText.includes('space');
+          const mentionsEdgeCase =
+            evidenceText.includes('edge') ||
+            evidenceText.includes('case') ||
+            evidenceText.includes('empty') ||
+            evidenceText.includes('null');
+
+          if (mentionsEdgeCase !== mentionsConstraint) {
+            return {
+              ...patch,
+              status: 'partial' as const,
+            };
+          }
+        }
+
+        return patch;
+      });
+
       onInterviewStateUpdate({
         stage: interviewStageRef.current,
-        checklist: filtered,
+        checklist: normalized,
       });
-      applyChecklistToRef(filtered);
+      applyChecklistToRef(normalized);
       return {
         ok: true,
-        message: `Updated ${filtered.length} checklist item(s).`,
-        applied: { count: filtered.length },
+        message: `Updated ${normalized.length} checklist item(s).`,
+        applied: { count: normalized.length },
       };
     }
 
@@ -785,6 +821,7 @@ export function useChatSession({
               ...interviewMissingItems.map((item) => `- ${item}`),
             ]
           : ['Missing checklist items: none']),
+        'Checklist policy: prefer partial when evidence is incomplete. Specifically, before_constraints must only be done when BOTH constraints and edge cases were explicitly discussed.',
         'If interview state changes, call tools. Do not emit custom state markup in response text.',
       ].join('\n');
 
