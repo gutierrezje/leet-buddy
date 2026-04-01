@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { mapTagsToCompact } from '@/shared/categoryMap';
 import {
+  type CurrentCodeSnapshot,
   type CurrentProblem,
+  isCodeSnapshotMessage,
   isProblemClearedMessage,
   isProblemMetadataMessage,
 } from '@/shared/types';
@@ -14,28 +16,39 @@ export function useProblemContext() {
     null
   );
   const [loading, setLoading] = useState(true);
+  const [currentCodeSnapshot, setCurrentCodeSnapshot] =
+    useState<CurrentCodeSnapshot | null>(null);
   const lastSlugRef = useRef<string | null>(null);
 
   // Bootstrap from storage on mount
   useEffect(() => {
-    chrome.storage.local.get(['currentProblem'], (data) => {
-      const cp = data.currentProblem;
-      if (cp?.slug && cp?.title) {
-        const compact = mapTagsToCompact(cp.tags || []);
-        if (lastSlugRef.current !== cp.slug) {
-          debug('Bootstrapped problem slug from storage: %s', cp.slug);
-          setCurrentProblem({
-            slug: cp.slug,
-            title: cp.title,
-            difficulty: cp.difficulty || '',
-            tags: compact,
-            startAt: cp.startAt,
-          });
-          lastSlugRef.current = cp.slug;
+    chrome.storage.local.get(
+      ['currentProblem', 'currentCodeSnapshot'],
+      (data) => {
+        const cp = data.currentProblem;
+        const snapshot = data.currentCodeSnapshot as
+          | CurrentCodeSnapshot
+          | undefined;
+        if (cp?.slug && cp?.title) {
+          const compact = mapTagsToCompact(cp.tags || []);
+          if (lastSlugRef.current !== cp.slug) {
+            debug('Bootstrapped problem slug from storage: %s', cp.slug);
+            setCurrentProblem({
+              slug: cp.slug,
+              title: cp.title,
+              difficulty: cp.difficulty || '',
+              tags: compact,
+              startAt: cp.startAt,
+            });
+            lastSlugRef.current = cp.slug;
+          }
         }
+        if (snapshot?.slug && snapshot?.code) {
+          setCurrentCodeSnapshot(snapshot);
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
   }, []);
 
   // Subscribe to messages from content script
@@ -46,6 +59,20 @@ export function useProblemContext() {
         debug('Problem cleared, resetting state');
         lastSlugRef.current = null;
         setCurrentProblem(null);
+        setCurrentCodeSnapshot(null);
+        return;
+      }
+
+      if (isCodeSnapshotMessage(msg)) {
+        setCurrentCodeSnapshot({
+          slug: msg.slug,
+          code: msg.code,
+          source: msg.source,
+          language: msg.language,
+          hasNonCommentCode: msg.hasNonCommentCode,
+          nonCommentFingerprint: msg.nonCommentFingerprint,
+          at: msg.at,
+        });
         return;
       }
 
@@ -90,6 +117,7 @@ export function useProblemContext() {
 
   return {
     currentProblem,
+    currentCodeSnapshot,
     loading,
   };
 }

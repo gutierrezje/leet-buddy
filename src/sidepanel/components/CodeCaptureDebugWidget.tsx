@@ -47,6 +47,7 @@ export default function CodeCaptureDebugWidget({ currentProblemSlug }: Props) {
           code: msg.code,
           source: msg.source,
           language: msg.language,
+          hasNonCommentCode: msg.hasNonCommentCode,
           at: msg.at,
         });
       }
@@ -120,6 +121,9 @@ export default function CodeCaptureDebugWidget({ currentProblemSlug }: Props) {
             {snapshot.slug}
             {snapshot.language ? ` (${snapshot.language})` : ''}
             {` - ${snapshot.source} - ${codeInfo.lines} lines - ${codeInfo.chars} chars`}
+            {typeof snapshot.hasNonCommentCode === 'boolean'
+              ? ` - non-comment: ${snapshot.hasNonCommentCode ? 'yes' : 'no'}`
+              : ''}
           </p>
           <p className="text-xs text-muted-foreground truncate">
             {codeInfo.preview}

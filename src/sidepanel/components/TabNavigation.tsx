@@ -1,13 +1,14 @@
 import { cn } from '@/lib/utils';
 
 interface TabNavigationProps {
-  activeTab: 'chat' | 'review';
-  onChangeTab: (tab: 'chat' | 'review') => void;
+  activeTab: 'chat' | 'interview' | 'review';
+  onChangeTab: (tab: 'chat' | 'interview' | 'review') => void;
 }
 
 export function TabNavigation({ activeTab, onChangeTab }: TabNavigationProps) {
   const tabs = [
     { id: 'chat' as const, label: 'Chat' },
+    { id: 'interview' as const, label: 'Interview' },
     { id: 'review' as const, label: 'Review' },
   ];
 

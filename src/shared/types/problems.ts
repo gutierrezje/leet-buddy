@@ -11,6 +11,8 @@ export type CurrentCodeSnapshot = {
   code: string;
   source: 'monaco' | 'textarea' | 'view-lines' | 'pre-code';
   language?: string;
+  hasNonCommentCode?: boolean;
+  nonCommentFingerprint?: string;
   at: number;
 };
 

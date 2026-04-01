@@ -7,18 +7,82 @@ type MonacoModelLike = {
   getLanguageId?: () => string;
 };
 
+type MonacoTokenLike = {
+  offset: number;
+  type: string;
+  language?: string;
+};
+
 type MonacoGlobal = {
   editor?: {
     getModels?: () => MonacoModelLike[];
+    tokenize?: (text: string, languageId: string) => MonacoTokenLike[][];
   };
 };
+
+function isIgnoredTokenType(tokenType: string): boolean {
+  const t = tokenType.toLowerCase();
+
+  if (
+    t.includes('comment') ||
+    t.includes('white') ||
+    t === '' ||
+    t === 'delimiter' ||
+    t.startsWith('delimiter.') ||
+    t.includes('punctuation')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function detectNonCommentCode(
+  monaco: MonacoGlobal | undefined,
+  code: string,
+  languageId: string | undefined
+): { hasNonCommentCode: boolean; nonCommentFingerprint?: string } {
+  if (!code.trim()) return { hasNonCommentCode: false };
+  if (!languageId) return { hasNonCommentCode: false };
+  if (!monaco?.editor?.tokenize) return { hasNonCommentCode: false };
+
+  const significantTokenTypes: string[] = [];
+
+  try {
+    const tokenLines = monaco.editor.tokenize(code, languageId);
+    for (const lineTokens of tokenLines) {
+      for (const token of lineTokens || []) {
+        const tokenType = token?.type || '';
+        if (!isIgnoredTokenType(tokenType)) {
+          significantTokenTypes.push(tokenType.toLowerCase());
+        }
+      }
+    }
+  } catch {
+    return { hasNonCommentCode: false };
+  }
+
+  if (significantTokenTypes.length === 0) {
+    return { hasNonCommentCode: false };
+  }
+
+  const fingerprint = significantTokenTypes.join('|');
+  return {
+    hasNonCommentCode: true,
+    nonCommentFingerprint: fingerprint,
+  };
+}
 
 function readMonacoCode(): {
   code: string;
   language?: string;
+  hasNonCommentCode?: boolean;
+  nonCommentFingerprint?: string;
 } {
   let code = '';
   let language: string | undefined;
+  let hasNonCommentCode = false;
+  let nonCommentFingerprint: string | undefined;
 
   try {
     const monaco = (window as unknown as { monaco?: MonacoGlobal }).monaco;
@@ -29,12 +93,15 @@ function readMonacoCode(): {
     if (primary?.getValue) {
       code = primary.getValue() || '';
       language = primary.getLanguageId?.();
+      const nonComment = detectNonCommentCode(monaco, code, language);
+      hasNonCommentCode = nonComment.hasNonCommentCode;
+      nonCommentFingerprint = nonComment.nonCommentFingerprint;
     }
   } catch {
     code = '';
   }
 
-  return { code, language };
+  return { code, language, hasNonCommentCode, nonCommentFingerprint };
 }
 
 window.addEventListener('message', (event) => {
@@ -52,7 +119,8 @@ window.addEventListener('message', (event) => {
   if (data.source !== PAGE_BRIDGE_SOURCE) return;
   if (data.type !== PAGE_MONACO_REQUEST) return;
 
-  const { code, language } = readMonacoCode();
+  const { code, language, hasNonCommentCode, nonCommentFingerprint } =
+    readMonacoCode();
 
   window.postMessage(
     {
@@ -61,6 +129,8 @@ window.addEventListener('message', (event) => {
       slug: typeof data.slug === 'string' ? data.slug : '',
       code,
       language,
+      hasNonCommentCode,
+      nonCommentFingerprint,
       at: Date.now(),
     },
     '*'

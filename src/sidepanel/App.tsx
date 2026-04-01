@@ -1,10 +1,11 @@
 import { Settings } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CurrentCodeSnapshot } from '@/shared/types';
 import ApiKeyError from './components/ApiKeyError';
 import ChatPane from './components/ChatPane';
 import CodeCaptureDebugWidget from './components/CodeCaptureDebugWidget';
 import EmptyState from './components/EmptyState';
+import InterviewProgressCard from './components/InterviewProgressCard';
 import ReviewPane from './components/ReviewPane';
 import SaveModal from './components/SaveModal';
 import Stopwatch from './components/Stopwatch';
@@ -12,11 +13,14 @@ import { TabNavigation } from './components/TabNavigation';
 import { HINT_PROMPTS } from './config';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useChatSession } from './hooks/useChatSession';
+import { useInterviewSession } from './hooks/useInterviewSession';
 import { useProblemContext } from './hooks/useProblemContext';
 import { useSubmissionFlow } from './hooks/useSubmissionFlow';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'review'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'interview' | 'review'>(
+    'chat'
+  );
   const [attachCodeNext, setAttachCodeNext] = useState(false);
   const [attachCodeBusy, setAttachCodeBusy] = useState(false);
   const [attachedSnapshot, setAttachedSnapshot] =
@@ -24,20 +28,102 @@ export default function App() {
   const stopwatchSecondsRef = useRef(0);
 
   const { apiKey, loading: apiKeyLoading } = useApiKeyState();
-  const { currentProblem, loading: problemLoading } = useProblemContext();
+  const {
+    currentProblem,
+    currentCodeSnapshot,
+    loading: problemLoading,
+  } = useProblemContext();
+
+  const {
+    session: interviewSession,
+    stageChecklist,
+    updateChecklist,
+    applyStateUpdate,
+    markCodingDetected,
+    setBaselineNonCommentFingerprint,
+    hasCandidateCodeChangedFromBaseline,
+    advanceStage,
+    completeWithoutScore,
+    resetSession,
+  } = useInterviewSession(currentProblem?.slug);
+
+  const stageLabelMap = {
+    before_coding: 'Before Coding',
+    during_coding: 'During Coding',
+    after_coding: 'After Coding',
+    completed: 'Completed',
+  } as const;
+
+  const interviewStageLabel = interviewSession
+    ? stageLabelMap[interviewSession.stage]
+    : 'Before Coding';
+  const interviewMissingItems = useMemo(
+    () =>
+      stageChecklist
+        .filter((item) => item.status !== 'done')
+        .map((item) => item.label),
+    [stageChecklist]
+  );
+
+  const looksLikeRealCode = useCallback(
+    (snapshot: CurrentCodeSnapshot): boolean => {
+      return snapshot.hasNonCommentCode === true;
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!interviewSession || !currentProblem || !currentCodeSnapshot) return;
+    if (currentCodeSnapshot.slug !== currentProblem.slug) return;
+
+    if (
+      interviewSession.stage === 'before_coding' &&
+      !interviewSession.baselineNonCommentFingerprint
+    ) {
+      setBaselineNonCommentFingerprint(
+        currentCodeSnapshot.nonCommentFingerprint
+      );
+      return;
+    }
+
+    if (interviewSession.stage !== 'before_coding') return;
+    if (!looksLikeRealCode(currentCodeSnapshot)) return;
+    if (
+      !hasCandidateCodeChangedFromBaseline(
+        currentCodeSnapshot.nonCommentFingerprint
+      )
+    ) {
+      return;
+    }
+
+    markCodingDetected();
+  }, [
+    currentCodeSnapshot,
+    currentProblem,
+    interviewSession,
+    looksLikeRealCode,
+    setBaselineNonCommentFingerprint,
+    hasCandidateCodeChangedFromBaseline,
+    markCodingDetected,
+  ]);
 
   const {
     messages,
     loading: chatLoading,
+    isReady: chatReady,
     input,
     setInput,
     handleSendMessage,
     handleSendHint,
+    handleInterviewEvent,
     clearCurrentProblemHistory,
   } = useChatSession({
     apiKey,
     problemSlug: currentProblem?.slug,
     problemTitle: currentProblem?.title,
+    interviewStageLabel,
+    interviewMissingItems,
+    onInterviewStateUpdate: applyStateUpdate,
   });
 
   const initialElapsed = currentProblem?.startAt
@@ -93,7 +179,7 @@ export default function App() {
             }
             setAttachCodeBusy(false);
           });
-        }, 200);
+        }, 450);
       }
     );
   };
@@ -110,6 +196,32 @@ export default function App() {
     if (attachCodeNext) {
       setAttachCodeNext(false);
     }
+  };
+
+  const handleAdvanceStageFromUi = () => {
+    if (!chatReady) return;
+    const from = interviewSession?.stage;
+    const prevLabel = interviewStageLabel;
+    const nextLabel =
+      from === 'before_coding'
+        ? 'During Coding'
+        : from === 'during_coding'
+          ? 'After Coding'
+          : 'Completed';
+
+    advanceStage();
+    handleInterviewEvent('stage_advance', {
+      previousStageLabel: prevLabel,
+      nextStageLabel: nextLabel,
+    });
+  };
+
+  const handleFinishAndRateFromUi = () => {
+    if (!chatReady) return;
+    completeWithoutScore();
+    handleInterviewEvent('finish_and_rate', {
+      previousStageLabel: 'After Coding',
+    });
   };
 
   if (!apiKey && !apiKeyLoading) {
@@ -195,6 +307,21 @@ export default function App() {
             onToggleCodeAttach={handleToggleCodeAttach}
             onClearHistory={clearCurrentProblemHistory}
           />
+        ) : activeTab === 'interview' ? (
+          interviewSession ? (
+            <div className="p-4">
+              <InterviewProgressCard
+                session={interviewSession}
+                stageChecklist={stageChecklist}
+                onSetStatus={(itemId, status) =>
+                  updateChecklist(itemId, status)
+                }
+                onAdvance={handleAdvanceStageFromUi}
+                onComplete={handleFinishAndRateFromUi}
+                onReset={resetSession}
+              />
+            </div>
+          ) : null
         ) : (
           <ReviewPane />
         )}

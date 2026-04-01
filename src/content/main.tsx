@@ -62,6 +62,7 @@ const monacoSnapshotSeenBySlug: Record<string, boolean> = {};
 let latestPageMonacoSnapshot: CurrentCodeSnapshot | null = null;
 
 const MAX_CODE_SNAPSHOT_CHARS = 120_000;
+const CODE_CAPTURE_INTERVAL_MS = 60_000;
 const PAGE_BRIDGE_SOURCE = 'LEETBUDDY_PAGE_BRIDGE';
 const PAGE_MONACO_REQUEST = 'LEETBUDDY_MONACO_REQUEST';
 const PAGE_MONACO_RESPONSE = 'LEETBUDDY_MONACO_RESPONSE';
@@ -103,6 +104,8 @@ function handlePageBridgeMessage(event: MessageEvent) {
         slug?: string;
         code?: string;
         language?: string;
+        hasNonCommentCode?: boolean;
+        nonCommentFingerprint?: string;
         at?: number;
       }
     | undefined;
@@ -121,6 +124,14 @@ function handlePageBridgeMessage(event: MessageEvent) {
     code: normalized.slice(0, MAX_CODE_SNAPSHOT_CHARS),
     source: 'monaco',
     language: typeof data.language === 'string' ? data.language : undefined,
+    hasNonCommentCode:
+      typeof data.hasNonCommentCode === 'boolean'
+        ? data.hasNonCommentCode
+        : undefined,
+    nonCommentFingerprint:
+      typeof data.nonCommentFingerprint === 'string'
+        ? data.nonCommentFingerprint
+        : undefined,
     at: typeof data.at === 'number' ? data.at : Date.now(),
   };
 
@@ -280,6 +291,7 @@ function handleCodeCaptureRequest(
   if (area !== 'local') return;
   if (typeof changes.codeSnapshotRequestNonce?.newValue !== 'number') return;
   detectCodeSnapshot();
+  window.setTimeout(() => detectCodeSnapshot(), 250);
 }
 
 function detectSubmissionResult() {
@@ -472,6 +484,7 @@ async function handleSlugChange() {
     safeSend(msg);
     persistCurrentProblem(problem);
     lastEmittedSlug = slug;
+    detectCodeSnapshot();
     return;
   }
 
@@ -499,6 +512,7 @@ async function handleSlugChange() {
   safeSend(msg);
   persistCurrentProblem(finalProblem);
   lastEmittedSlug = slug;
+  detectCodeSnapshot();
 }
 
 function cycle() {
@@ -515,6 +529,10 @@ function debounced() {
 window.addEventListener('message', handlePageBridgeMessage);
 chrome.storage.onChanged.addListener(handleCodeCaptureRequest);
 cycle();
+window.setInterval(() => {
+  if (document.visibilityState !== 'visible') return;
+  detectCodeSnapshot();
+}, CODE_CAPTURE_INTERVAL_MS);
 new MutationObserver(debounced).observe(document.body, {
   childList: true,
   subtree: true,

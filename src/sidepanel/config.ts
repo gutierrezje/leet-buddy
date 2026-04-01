@@ -100,6 +100,21 @@ Follow these rules strictly:
 6.  **Handle Direct Requests for Answers:** If the user asks for the answer, politely refuse and steer them back to the problem-solving process.
 `;
 
+export function buildStageSystemPrompt(
+  stageLabel: string,
+  missingItems: string[]
+) {
+  const missing =
+    missingItems.length > 0
+      ? `\nCurrent stage requirements not yet complete:\n${missingItems.map((item) => `- ${item}`).join('\n')}`
+      : '\nCurrent stage requirements are complete.';
+
+  const goAheadProtocol =
+    '\n\nGo-ahead protocol (strict): In Before Coding, do not permit coding until the candidate has sufficiently explained the algorithm. When ready, include this exact sentence on its own line: "GO-AHEAD: You can start coding now." The checklist item "Got go-ahead before coding" is binary: mark done only if the candidate waited for that explicit go-ahead before coding. If they started coding before that line, keep it pending.';
+
+  return `${SYSTEM_PROMPT}\n\nCurrent interview stage: ${stageLabel}.${missing}${goAheadProtocol}\n\nPrioritize process adherence for this stage. Keep nudging the user to complete missing checklist items before moving forward.\n\nState update rules:\n- Always include exactly one <INTERVIEW_STATE>...</INTERVIEW_STATE> block at the end of every response.\n- The JSON must be valid and compact.\n- Keep checklist status updated every turn based on evidence.\n- Use stage values only from: before_coding, during_coding, after_coding, completed.\n- Include score only when stage is completed.\n- Do not use any other XML-like tags.`;
+}
+
 export const HINT_SYSTEM_PROMPT = `
 You are a concise technical guide providing focused hints for programming problems.
 
