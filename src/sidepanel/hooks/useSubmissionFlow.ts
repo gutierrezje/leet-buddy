@@ -14,7 +14,7 @@ const debug = createLogger('useSubmissionFlow');
 
 interface UseSubmissionFlowProps {
   currentProblem: CurrentProblem | null;
-  getStopwatchElapsed: () => number;
+  getStopwatchSnapshot: () => { elapsedSec: number; hasValue: boolean };
 }
 
 // Typed state boundaries for submission flow
@@ -62,7 +62,7 @@ function submissionReducer(
 
 export function useSubmissionFlow({
   currentProblem,
-  getStopwatchElapsed,
+  getStopwatchSnapshot,
 }: UseSubmissionFlowProps) {
   const [state, dispatch] = useReducer(submissionReducer, { status: 'idle' });
   const [resetTick, setResetTick] = useState(0);
@@ -70,11 +70,11 @@ export function useSubmissionFlow({
 
   // Use ref to avoid stale closure in message listener
   const currentProblemRef = useRef<CurrentProblem | null>(currentProblem);
-  const getStopwatchElapsedRef = useRef(getStopwatchElapsed);
+  const getStopwatchSnapshotRef = useRef(getStopwatchSnapshot);
 
   useEffect(() => {
-    getStopwatchElapsedRef.current = getStopwatchElapsed;
-  }, [getStopwatchElapsed]);
+    getStopwatchSnapshotRef.current = getStopwatchSnapshot;
+  }, [getStopwatchSnapshot]);
 
   useEffect(() => {
     // If the problem changes, clear any pending modal state
@@ -154,14 +154,14 @@ export function useSubmissionFlow({
         // For the prevTime label, we still want just the absolute latest attempt
         const existing = await getLatestSubmission(problem.slug);
 
-        // If the stopwatch hasn't ticked or the ref is somehow 0, fallback to the background tracked time
-        const refElapsed = getStopwatchElapsedRef.current();
-        const elapsedSec =
-          refElapsed > 0
-            ? refElapsed
-            : problem.startAt
-              ? Math.floor((msg.at - problem.startAt) / 1000)
-              : 0;
+        // Fallback only if stopwatch has never produced a value for this problem.
+        const stopwatchSnapshot = getStopwatchSnapshotRef.current();
+        const refElapsed = stopwatchSnapshot.elapsedSec;
+        const elapsedSec = stopwatchSnapshot.hasValue
+          ? refElapsed
+          : problem.startAt
+            ? Math.floor((msg.at - problem.startAt) / 1000)
+            : 0;
 
         dispatch({
           type: 'OPEN_MODAL',

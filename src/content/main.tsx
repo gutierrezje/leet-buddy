@@ -180,13 +180,30 @@ function extractCodeSnapshot(slug: string): CurrentCodeSnapshot | null {
   type MonacoGlobal = {
     editor?: {
       getModels?: () => MonacoModelLike[];
+      getEditors?: () => Array<{
+        hasTextFocus?: () => boolean;
+        getModel?: () => MonacoModelLike | null;
+      }>;
     };
   };
 
   const windowWithMonaco = window as unknown as { monaco?: MonacoGlobal };
-  const monacoModels = windowWithMonaco.monaco?.editor?.getModels?.();
-  if (monacoModels?.length) {
-    const primary = monacoModels[0];
+  const monaco = windowWithMonaco.monaco;
+  const editorModels = monaco?.editor?.getEditors?.();
+  const focusedModel = editorModels
+    ?.find((editor) => editor?.hasTextFocus?.())
+    ?.getModel?.();
+  const fallbackModelFromEditors = editorModels?.[0]?.getModel?.();
+  const monacoModels = monaco?.editor?.getModels?.() || [];
+  const primary =
+    focusedModel ||
+    fallbackModelFromEditors ||
+    [...monacoModels]
+      .reverse()
+      .find((model) => (model.getValue?.() || '').trim().length > 0) ||
+    monacoModels[monacoModels.length - 1];
+
+  if (primary) {
     const code = normalizeCode(primary.getValue?.() || '');
     if (code) {
       return {

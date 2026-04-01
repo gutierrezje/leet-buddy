@@ -1,4 +1,5 @@
 import type { Chat, FunctionCall, Part } from '@google/genai';
+import { extractResponseText } from './textExtract';
 import type {
   ChatToolRuntime,
   RuntimeResponse,
@@ -21,7 +22,7 @@ export function createGemini25ToolRuntime(chat: Chat): ChatToolRuntime {
     response: Awaited<ReturnType<Chat['sendMessage']>>
   ): Promise<RuntimeResponse> {
     return {
-      text: response.text ?? '',
+      text: extractResponseText(response),
       toolCalls: (response.functionCalls ?? [])
         .map(toRuntimeToolCall)
         .filter((item): item is RuntimeToolCall => item !== null),

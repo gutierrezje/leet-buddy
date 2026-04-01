@@ -3,6 +3,7 @@ import type { GeminiModelKey } from '../../config';
 import { createGemini3ToolRuntime } from './gemini3';
 import { createGemini25ToolRuntime } from './gemini25';
 import { createNoToolRuntime } from './none';
+import { extractResponseText } from './textExtract';
 import type {
   ChatToolRuntime,
   RuntimeResponse,
@@ -52,7 +53,7 @@ export function createToolRuntime(params: {
         config: sendParams.config,
       });
       return {
-        text: response.text ?? '',
+        text: extractResponseText(response),
         toolCalls: [],
       };
     },

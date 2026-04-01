@@ -48,6 +48,7 @@ interface UseChatSessionProps {
   interviewStageLabel?: string;
   interviewMissingItems?: string[];
   interviewChecklist?: InterviewChecklistItem[];
+  finalScore?: InterviewScore;
   onInterviewStateUpdate?: (update: InterviewStateUpdate) => void;
 }
 
@@ -105,45 +106,24 @@ const INTERVIEW_TOOL_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'complete_interview',
     description:
-      'Finalize interview and persist full score breakdown and recommendation.',
+      'Finalize interview with a recommendation and concise rationale.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
-        score: {
-          type: 'object',
-          properties: {
-            dsa: { type: 'number' },
-            communication: { type: 'number' },
-            coding: { type: 'number' },
-            speed: { type: 'number' },
-            testing: { type: 'number' },
-            overall: { type: 'number' },
-            recommendation: {
-              type: 'string',
-              enum: [
-                'Strong Hire',
-                'Hire',
-                'Weak Hire',
-                'Weak Reject',
-                'Reject',
-                'Strong Reject',
-              ],
-            },
-          },
-          required: [
-            'dsa',
-            'communication',
-            'coding',
-            'speed',
-            'testing',
-            'overall',
-            'recommendation',
+        recommendation: {
+          type: 'string',
+          enum: [
+            'Strong Hire',
+            'Hire',
+            'Weak Hire',
+            'Weak Reject',
+            'Reject',
+            'Strong Reject',
           ],
-          additionalProperties: false,
         },
         summary: { type: 'string' },
       },
-      required: ['score'],
+      required: ['recommendation', 'summary'],
       additionalProperties: false,
     },
   },
@@ -155,6 +135,19 @@ const STAGE_ORDER: InterviewStage[] = [
   'after_coding',
   'completed',
 ];
+
+const SCORE_SUMMARY_PREFIX = 'SCORE_SUMMARY::';
+
+function parseScoreSummaryPayload(value: string): InterviewScore | null {
+  if (!value.startsWith(SCORE_SUMMARY_PREFIX)) return null;
+  const raw = value.slice(SCORE_SUMMARY_PREFIX.length);
+  try {
+    const parsed = JSON.parse(raw) as InterviewScore;
+    return parseScoreCandidate(parsed) as InterviewScore;
+  } catch {
+    return null;
+  }
+}
 
 type ParsedFinalScore = {
   dsa: number;
@@ -183,6 +176,18 @@ type ParsedChecklistPatch = {
   status: 'pending' | 'partial' | 'done';
   evidence?: string;
 };
+
+function parseRecommendationCandidate(
+  value: unknown
+): InterviewScore['recommendation'] | null {
+  if (value === 'Strong Hire') return 'Strong Hire';
+  if (value === 'Hire') return 'Hire';
+  if (value === 'Weak Hire') return 'Weak Hire';
+  if (value === 'Weak Reject') return 'Weak Reject';
+  if (value === 'Reject') return 'Reject';
+  if (value === 'Strong Reject') return 'Strong Reject';
+  return null;
+}
 
 function parseScoreCandidate(value: unknown): ParsedFinalScore | undefined {
   if (!value || typeof value !== 'object') return undefined;
@@ -409,6 +414,7 @@ export function useChatSession({
   interviewStageLabel,
   interviewMissingItems,
   interviewChecklist,
+  finalScore,
   onInterviewStateUpdate,
 }: UseChatSessionProps) {
   const [messages, setMessages] = useState<Message[]>(
@@ -698,25 +704,44 @@ export function useChatSession({
       };
     }
 
-    const score = parseScoreCandidate(args.score);
-    if (!score) {
+    const recommendation = parseRecommendationCandidate(args.recommendation);
+    if (!recommendation) {
       return {
         ok: false,
-        message: 'Invalid or missing score for complete_interview.',
+        message:
+          'Missing or invalid recommendation for complete_interview tool call.',
+      };
+    }
+
+    const summary =
+      typeof args.summary === 'string'
+        ? parseScoreSummaryPayload(args.summary)
+        : null;
+    const resolvedScore = summary ?? finalScore;
+    if (!resolvedScore) {
+      return {
+        ok: false,
+        message: 'Missing deterministic score context for complete_interview.',
       };
     }
 
     onInterviewStateUpdate({
       stage: 'completed',
       checklist: [],
-      score: score as InterviewScore,
+      score: {
+        ...resolvedScore,
+        recommendation,
+      },
     });
     interviewStageRef.current = 'completed';
 
     return {
       ok: true,
       message: 'Interview marked completed with final score.',
-      applied: { stage: 'completed', score },
+      applied: {
+        stage: 'completed',
+        recommendation,
+      },
     };
   };
 
@@ -844,7 +869,7 @@ export function useChatSession({
         : `${stageContext}\n\nUser request: ${messageText}`;
 
       const response = await sendMessageWithToolLoop(messageForModel);
-      const aiText = response.text;
+      const aiText = response.text ?? '';
       const cleanAiText = sanitizeAiDisplayText(aiText);
 
       const aiMessage: Message = {
@@ -990,7 +1015,7 @@ export function useChatSession({
         kind === 'finish_and_rate'
           ? [
               'The interview has been marked complete by the user.',
-              'Call complete_interview exactly once with final score, then provide concise final evaluation text.',
+              'Call complete_interview exactly once with recommendation and summary. Use the score summary provided below in summary field verbatim, and base recommendation on both checklist adherence and the full conversation quality.',
               context.scoreSummary
                 ? `Current score summary: ${context.scoreSummary}`
                 : '',

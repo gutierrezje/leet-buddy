@@ -16,6 +16,7 @@ import { useChatSession } from './hooks/useChatSession';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useProblemContext } from './hooks/useProblemContext';
 import { useSubmissionFlow } from './hooks/useSubmissionFlow';
+import { computeInterviewScore } from './interviewRubric';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'interview' | 'review'>(
@@ -26,6 +27,8 @@ export default function App() {
   const [attachedSnapshot, setAttachedSnapshot] =
     useState<CurrentCodeSnapshot | null>(null);
   const stopwatchSecondsRef = useRef(0);
+  const hasStopwatchValueRef = useRef(false);
+  const lastStopwatchProblemSlugRef = useRef<string | undefined>(undefined);
 
   const { apiKey, loading: apiKeyLoading } = useApiKeyState();
   const {
@@ -33,6 +36,12 @@ export default function App() {
     currentCodeSnapshot,
     loading: problemLoading,
   } = useProblemContext();
+
+  if (lastStopwatchProblemSlugRef.current !== currentProblem?.slug) {
+    lastStopwatchProblemSlugRef.current = currentProblem?.slug;
+    hasStopwatchValueRef.current = false;
+    stopwatchSecondsRef.current = 0;
+  }
 
   const {
     session: interviewSession,
@@ -125,6 +134,7 @@ export default function App() {
     interviewStageLabel,
     interviewMissingItems,
     interviewChecklist: interviewSession?.checklist,
+    finalScore: interviewSession?.score,
     onInterviewStateUpdate: applyStateUpdate,
   });
 
@@ -143,7 +153,10 @@ export default function App() {
     handleConfirmSave,
   } = useSubmissionFlow({
     currentProblem,
-    getStopwatchElapsed: () => stopwatchSecondsRef.current || initialElapsed,
+    getStopwatchSnapshot: () => ({
+      elapsedSec: stopwatchSecondsRef.current,
+      hasValue: hasStopwatchValueRef.current,
+    }),
   });
 
   const handleOpenOptions = () => {
@@ -151,12 +164,11 @@ export default function App() {
   };
 
   const handleToggleCodeAttach = () => {
+    if (!currentProblem?.slug) return;
+
     if (attachCodeNext) {
       setAttachCodeNext(false);
-      return;
     }
-
-    if (!currentProblem?.slug) return;
 
     setAttachCodeBusy(true);
     const nonce = Date.now();
@@ -225,9 +237,15 @@ export default function App() {
 
   const handleFinishAndRateFromUi = () => {
     if (!chatReady) return;
+    const localScore = interviewSession
+      ? computeInterviewScore(interviewSession)
+      : undefined;
     completeWithoutScore();
     handleInterviewEvent('finish_and_rate', {
       previousStageLabel: 'After Coding',
+      scoreSummary: localScore
+        ? `SCORE_SUMMARY::${JSON.stringify(localScore)}`
+        : undefined,
     });
   };
 
@@ -278,6 +296,7 @@ export default function App() {
               onStop={handleStopwatchStop}
               onTimeUpdate={(s) => {
                 stopwatchSecondsRef.current = s;
+                hasStopwatchValueRef.current = true;
               }}
               resetTrigger={resetTick}
               resumeTrigger={resumeTick}

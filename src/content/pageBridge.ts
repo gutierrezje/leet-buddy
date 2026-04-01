@@ -16,9 +16,38 @@ type MonacoTokenLike = {
 type MonacoGlobal = {
   editor?: {
     getModels?: () => MonacoModelLike[];
+    getEditors?: () => Array<{
+      hasTextFocus?: () => boolean;
+      getModel?: () => MonacoModelLike | null;
+    }>;
     tokenize?: (text: string, languageId: string) => MonacoTokenLike[][];
   };
 };
+
+function pickPrimaryModel(
+  monaco: MonacoGlobal | undefined
+): MonacoModelLike | null {
+  const editors = monaco?.editor?.getEditors?.();
+  if (Array.isArray(editors) && editors.length > 0) {
+    const focused = editors.find((editor) => editor?.hasTextFocus?.());
+    const focusedModel = focused?.getModel?.();
+    if (focusedModel) return focusedModel;
+
+    const firstEditorModel = editors[0]?.getModel?.();
+    if (firstEditorModel) return firstEditorModel;
+  }
+
+  const models = monaco?.editor?.getModels?.();
+  if (!Array.isArray(models) || models.length === 0) return null;
+
+  for (let i = models.length - 1; i >= 0; i -= 1) {
+    const candidate = models[i];
+    const value = candidate?.getValue?.() || '';
+    if (value.trim().length > 0) return candidate;
+  }
+
+  return models[models.length - 1] ?? null;
+}
 
 function isIgnoredTokenType(tokenType: string): boolean {
   const t = tokenType.toLowerCase();
@@ -86,9 +115,7 @@ function readMonacoCode(): {
 
   try {
     const monaco = (window as unknown as { monaco?: MonacoGlobal }).monaco;
-    const models = monaco?.editor?.getModels?.();
-    const primary =
-      Array.isArray(models) && models.length > 0 ? models[0] : null;
+    const primary = pickPrimaryModel(monaco);
 
     if (primary?.getValue) {
       code = primary.getValue() || '';

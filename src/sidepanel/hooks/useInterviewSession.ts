@@ -9,6 +9,7 @@ import { isSubmissionAcceptedMessage } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 import {
   canAdvanceStage,
+  computeInterviewScore,
   createInterviewSession,
   getChecklistByStage,
   getInterviewSessionKey,
@@ -217,11 +218,13 @@ export function useInterviewSession(problemSlug?: string) {
   const completeWithoutScore = () => {
     setSession((prev) => {
       if (!prev) return prev;
+      const computedScore = computeInterviewScore(prev);
       const next: InterviewSession = {
         ...prev,
         stage: 'completed',
         completedAt: Date.now(),
         updatedAt: Date.now(),
+        score: computedScore,
       };
       persistSession(next);
       return next;

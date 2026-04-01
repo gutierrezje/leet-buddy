@@ -99,14 +99,7 @@ export default function InterviewProgressCard({
         </div>
       ) : (
         <div className="mt-2 rounded-md border border-border/60 px-2 py-2 text-xs text-foreground">
-          <p>Overall: {session.score?.overall ?? 0}</p>
-          <p>Verdict: {session.score?.recommendation ?? 'N/A'}</p>
-          <p>
-            DSA {session.score?.dsa ?? 0} • Comm{' '}
-            {session.score?.communication ?? 0} • Coding{' '}
-            {session.score?.coding ?? 0} • Testing {session.score?.testing ?? 0}{' '}
-            • Speed {session.score?.speed ?? 0}
-          </p>
+          <p>Recommendation: {session.score?.recommendation ?? 'N/A'}</p>
         </div>
       )}
     </div>
