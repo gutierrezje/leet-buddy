@@ -865,10 +865,18 @@ export function withInterviewRationale(
 export function buildFinalAssessmentSummary(
   session: InterviewSession
 ): DerivedFinalAssessment {
-  return (
-    session.finalAssessment ??
-    finalizeInterviewSession(session).finalAssessment!
-  );
+  if (session.finalAssessment) {
+    return session.finalAssessment;
+  }
+
+  const finalized = finalizeInterviewSession(session);
+  if (!finalized.finalAssessment) {
+    throw new Error(
+      'Final assessment could not be derived for interview session.'
+    );
+  }
+
+  return finalized.finalAssessment;
 }
 
 export function parseFinalAssessmentToken(

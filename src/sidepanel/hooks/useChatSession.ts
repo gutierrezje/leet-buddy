@@ -26,10 +26,10 @@ import type {
 import { createLogger } from '@/shared/utils/debug';
 import {
   GEMINI_MODELS,
+  type GeminiModelKey,
   HINT_SYSTEM_PROMPT,
   SYSTEM_PROMPT,
   THINKING_BUDGETS,
-  type GeminiModelKey,
   type ThinkingBudgetKey,
   type ThinkingLevel,
 } from '../config';

@@ -28,8 +28,6 @@ vi.mock('@google/genai', () => {
     interactions = {
       create: mockInteractionsCreate,
     };
-
-    constructor(_args: { apiKey: string }) {}
   }
 
   return {
