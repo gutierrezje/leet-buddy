@@ -121,8 +121,10 @@ export default function App() {
     apiKey,
     problemSlug: currentProblem?.slug,
     problemTitle: currentProblem?.title,
+    interviewStage: interviewSession?.stage,
     interviewStageLabel,
     interviewMissingItems,
+    interviewChecklist: interviewSession?.checklist,
     onInterviewStateUpdate: applyStateUpdate,
   });
 

@@ -1,4 +1,10 @@
-import { type Chat, GoogleGenAI } from '@google/genai';
+import {
+  type Chat,
+  FunctionCallingConfigMode,
+  type FunctionDeclaration,
+  GoogleGenAI,
+  type Part,
+} from '@google/genai';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import {
   CHAT_HISTORY_INDEX_KEY,
@@ -8,20 +14,29 @@ import {
 } from '@/shared/chatHistory';
 import type {
   CurrentCodeSnapshot,
+  InterviewChecklistItem,
+  InterviewScore,
+  InterviewStage,
   InterviewStateUpdate,
   Message,
 } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 import {
-  buildStageSystemPrompt,
   GEMINI_MODELS,
   type GeminiModelKey,
   HINT_SYSTEM_PROMPT,
+  SYSTEM_PROMPT,
   THINKING_BUDGETS,
   type ThinkingBudgetKey,
   type ThinkingLevel,
 } from '../config';
 import initialMessages from '../data/messages.json';
+import {
+  type ChatToolRuntime,
+  createToolRuntime,
+  type RuntimeToolCall,
+  type RuntimeToolResponse,
+} from '../llm/toolRuntime';
 
 const debug = createLogger('useChatSession');
 
@@ -29,12 +44,117 @@ interface UseChatSessionProps {
   apiKey: string;
   problemSlug: string | undefined;
   problemTitle: string | undefined;
+  interviewStage?: InterviewStage;
   interviewStageLabel?: string;
   interviewMissingItems?: string[];
+  interviewChecklist?: InterviewChecklistItem[];
   onInterviewStateUpdate?: (update: InterviewStateUpdate) => void;
 }
 
 type InterviewEventKind = 'stage_advance' | 'finish_and_rate';
+
+type InterviewToolName =
+  | 'set_interview_stage'
+  | 'update_interview_checklist'
+  | 'complete_interview';
+
+const INTERVIEW_TOOL_DECLARATIONS: FunctionDeclaration[] = [
+  {
+    name: 'set_interview_stage',
+    description:
+      'Move interview stage forward when candidate progresses to a new phase.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        stage: {
+          type: 'string',
+          enum: ['before_coding', 'during_coding', 'after_coding'],
+        },
+        reason: { type: 'string' },
+      },
+      required: ['stage'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_interview_checklist',
+    description:
+      'Update one or more interview checklist item statuses with optional evidence.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        updates: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: {
+              itemId: { type: 'string' },
+              status: { type: 'string', enum: ['pending', 'partial', 'done'] },
+              evidence: { type: 'string' },
+            },
+            required: ['itemId', 'status'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['updates'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'complete_interview',
+    description:
+      'Finalize interview and persist full score breakdown and recommendation.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        score: {
+          type: 'object',
+          properties: {
+            dsa: { type: 'number' },
+            communication: { type: 'number' },
+            coding: { type: 'number' },
+            speed: { type: 'number' },
+            testing: { type: 'number' },
+            overall: { type: 'number' },
+            recommendation: {
+              type: 'string',
+              enum: [
+                'Strong Hire',
+                'Hire',
+                'Weak Hire',
+                'Weak Reject',
+                'Reject',
+                'Strong Reject',
+              ],
+            },
+          },
+          required: [
+            'dsa',
+            'communication',
+            'coding',
+            'speed',
+            'testing',
+            'overall',
+            'recommendation',
+          ],
+          additionalProperties: false,
+        },
+        summary: { type: 'string' },
+      },
+      required: ['score'],
+      additionalProperties: false,
+    },
+  },
+];
+
+const STAGE_ORDER: InterviewStage[] = [
+  'before_coding',
+  'during_coding',
+  'after_coding',
+  'completed',
+];
 
 type ParsedFinalScore = {
   dsa: number;
@@ -50,6 +170,18 @@ type ParsedFinalScore = {
     | 'Weak Reject'
     | 'Reject'
     | 'Strong Reject';
+};
+
+type ToolExecutionResult = {
+  ok: boolean;
+  message: string;
+  applied?: Record<string, unknown>;
+};
+
+type ParsedChecklistPatch = {
+  itemId: string;
+  status: 'pending' | 'partial' | 'done';
+  evidence?: string;
 };
 
 function parseScoreCandidate(value: unknown): ParsedFinalScore | undefined {
@@ -85,58 +217,68 @@ function parseScoreCandidate(value: unknown): ParsedFinalScore | undefined {
   return parsed;
 }
 
-type ParsedStateUpdate = {
-  stage: 'before_coding' | 'during_coding' | 'after_coding' | 'completed';
-  checklist: Array<{
-    itemId: string;
-    status: 'pending' | 'partial' | 'done';
-    evidence?: string;
-  }>;
-  score?: ParsedFinalScore;
-};
-
-function parseInterviewStateUpdateFromText(
-  text: string
-): ParsedStateUpdate | null {
-  const match = text.match(/<INTERVIEW_STATE>([\s\S]*?)<\/INTERVIEW_STATE>/i);
-  if (!match?.[1]) return null;
-
-  try {
-    const parsed = JSON.parse(match[1].trim()) as ParsedStateUpdate;
-    const validStages = new Set([
-      'before_coding',
-      'during_coding',
-      'after_coding',
-      'completed',
-    ]);
-
-    if (!validStages.has(parsed.stage)) return null;
-    if (!Array.isArray(parsed.checklist)) return null;
-
-    const safeChecklist = parsed.checklist.filter(
-      (c) =>
-        c &&
-        typeof c.itemId === 'string' &&
-        (c.status === 'pending' ||
-          c.status === 'partial' ||
-          c.status === 'done')
-    );
-
-    return {
-      stage: parsed.stage,
-      checklist: safeChecklist,
-      score: parseScoreCandidate(parsed.score),
-    };
-  } catch {
-    return null;
-  }
-}
-
 function sanitizeAiDisplayText(text: string): string {
   return text
     .replace(/\n?<system-reminder>[\s\S]*?<\/system-reminder>\n?/gi, '\n')
-    .replace(/\n?<INTERVIEW_STATE>[\s\S]*?<\/INTERVIEW_STATE>\n?/gi, '\n')
     .trim();
+}
+
+function isGemini25Model(modelKey: GeminiModelKey): boolean {
+  return GEMINI_MODELS[modelKey].id.startsWith('gemini-2.5-');
+}
+
+function canMoveToStage(
+  current: InterviewStage,
+  next: Exclude<InterviewStage, 'completed'>
+): boolean {
+  const currentIdx = STAGE_ORDER.indexOf(current);
+  const nextIdx = STAGE_ORDER.indexOf(next);
+  if (currentIdx === -1 || nextIdx === -1) return false;
+  return nextIdx >= currentIdx;
+}
+
+function sanitizeToolName(value: unknown): InterviewToolName | null {
+  if (value === 'set_interview_stage') return 'set_interview_stage';
+  if (value === 'update_interview_checklist')
+    return 'update_interview_checklist';
+  if (value === 'complete_interview') return 'complete_interview';
+  return null;
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object') return {};
+  return value as Record<string, unknown>;
+}
+
+function parseChecklistUpdates(value: unknown): ParsedChecklistPatch[] {
+  if (!Array.isArray(value)) return [];
+  const parsed = value
+    .map((entry) => asObject(entry))
+    .map((entry): ParsedChecklistPatch | null => {
+      const itemId = entry.itemId;
+      const status = entry.status;
+      const evidence = entry.evidence;
+      if (typeof itemId !== 'string') return null;
+      if (status !== 'pending' && status !== 'partial' && status !== 'done') {
+        return null;
+      }
+      return {
+        itemId,
+        status,
+        evidence: typeof evidence === 'string' ? evidence : undefined,
+      };
+    });
+
+  return parsed.filter((item): item is ParsedChecklistPatch => item !== null);
+}
+
+function parseStageCandidate(
+  value: unknown
+): Exclude<InterviewStage, 'completed'> | null {
+  if (value === 'before_coding') return 'before_coding';
+  if (value === 'during_coding') return 'during_coding';
+  if (value === 'after_coding') return 'after_coding';
+  return null;
 }
 
 // Typed state boundaries for chat session
@@ -263,14 +405,17 @@ export function useChatSession({
   apiKey,
   problemSlug,
   problemTitle,
+  interviewStage,
   interviewStageLabel,
   interviewMissingItems,
+  interviewChecklist,
   onInterviewStateUpdate,
 }: UseChatSessionProps) {
   const [messages, setMessages] = useState<Message[]>(
     initialMessages as Message[]
   );
   const [chatSession, setChatSession] = useState<Chat | null>(null);
+  const toolRuntimeRef = useRef<ChatToolRuntime | null>(null);
   const [state, dispatch] = useReducer(chatReducer, { status: 'idle' });
   const [input, setInput] = useState('');
   const aiRef = useRef<GoogleGenAI | null>(null);
@@ -278,6 +423,23 @@ export function useChatSession({
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>('medium');
   const [thinkingBudget, setThinkingBudget] =
     useState<ThinkingBudgetKey>('medium');
+
+  const interviewStageRef = useRef<InterviewStage>(
+    interviewStage ?? 'before_coding'
+  );
+  const interviewChecklistRef = useRef<InterviewChecklistItem[]>(
+    interviewChecklist ?? []
+  );
+
+  useEffect(() => {
+    if (interviewStage) {
+      interviewStageRef.current = interviewStage;
+    }
+  }, [interviewStage]);
+
+  useEffect(() => {
+    interviewChecklistRef.current = interviewChecklist ?? [];
+  }, [interviewChecklist]);
 
   useEffect(() => {
     if (!problemSlug) return;
@@ -323,7 +485,6 @@ export function useChatSession({
     });
   }, [problemSlug, messages]);
 
-  // Load model settings from storage
   useEffect(() => {
     chrome.storage.local.get(
       ['geminiModel', 'thinkingLevel', 'thinkingBudget'],
@@ -341,23 +502,34 @@ export function useChatSession({
     );
   }, []);
 
-  // Initialize the AI chat session once the key and problem are available
   useEffect(() => {
     if (!apiKey || !problemTitle) {
       setChatSession(null);
+      toolRuntimeRef.current = null;
       dispatch({ type: 'CLEAR' });
       return;
     }
 
-    debug('Initializing new chat session for problem: %s', problemTitle);
+    const toolCallingEnabled = isGemini25Model(modelKey);
+    debug(
+      'Initializing chat session for %s (tool calling: %s)',
+      problemTitle,
+      toolCallingEnabled ? 'enabled' : 'disabled'
+    );
     dispatch({ type: 'INITIALIZE_START' });
 
     const ai = new GoogleGenAI({ apiKey });
     aiRef.current = ai;
 
     const modelId = GEMINI_MODELS[modelKey].id;
-    const stagePrompt = buildStageSystemPrompt('Before Coding', []);
-    const dynamicSystemPrompt = `${stagePrompt}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.\n\nInclude exactly one authoritative state payload at the end of every response:\n<INTERVIEW_STATE>{"stage":"before_coding|during_coding|after_coding|completed","checklist":[{"itemId":"...","status":"pending|partial|done","evidence":"short"}],"score":{"dsa":0,"communication":0,"coding":0,"speed":0,"testing":0,"overall":0,"recommendation":"Strong Hire|Hire|Weak Hire|Weak Reject|Reject|Strong Reject"}}</INTERVIEW_STATE>\nOnly include score when stage is completed.`;
+    const checklistGuide = (interviewChecklist ?? [])
+      .map(
+        (item) => `- ${item.id} [${item.stage}] = ${item.status}: ${item.label}`
+      )
+      .join('\n');
+
+    const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.\n\nChecklist source of truth:\n${checklistGuide || '- (no checklist loaded)'}\n\nState policy:\n- Keep interview state accurate every turn.\n- When state should change, call a function tool instead of emitting state markup.\n- Use only checklist item IDs from the source-of-truth list.\n- Only move stage forward.`;
+
     const thinkingConfig = buildThinkingConfig(
       modelKey,
       thinkingLevel,
@@ -369,12 +541,196 @@ export function useChatSession({
       config: {
         systemInstruction: dynamicSystemPrompt,
         thinkingConfig,
+        ...(toolCallingEnabled
+          ? {
+              tools: [
+                {
+                  functionDeclarations: INTERVIEW_TOOL_DECLARATIONS,
+                },
+              ],
+              toolConfig: {
+                functionCallingConfig: {
+                  mode: FunctionCallingConfigMode.AUTO,
+                },
+              },
+            }
+          : {}),
       },
     });
 
     setChatSession(newChat);
+    toolRuntimeRef.current = createToolRuntime({
+      modelKey,
+      modelId,
+      chat: newChat,
+    });
     dispatch({ type: 'INITIALIZE_SUCCESS' });
-  }, [apiKey, problemTitle, modelKey, thinkingLevel, thinkingBudget]);
+  }, [
+    apiKey,
+    problemTitle,
+    modelKey,
+    thinkingLevel,
+    thinkingBudget,
+    interviewChecklist,
+  ]);
+
+  const applyChecklistToRef = (updates: ParsedChecklistPatch[]) => {
+    if (updates.length === 0) return;
+    const patchMap = new Map(
+      updates.map((patch) => [patch.itemId, patch.status] as const)
+    );
+    interviewChecklistRef.current = interviewChecklistRef.current.map((item) =>
+      patchMap.has(item.id)
+        ? { ...item, status: patchMap.get(item.id) ?? item.status }
+        : item
+    );
+  };
+
+  const executeToolCall = (call: RuntimeToolCall): ToolExecutionResult => {
+    const toolName = sanitizeToolName(call.name);
+    if (!toolName) {
+      return { ok: false, message: 'Unknown tool name.' };
+    }
+
+    const args = asObject(call.args);
+
+    if (!onInterviewStateUpdate) {
+      return {
+        ok: false,
+        message: 'Interview state update callback unavailable.',
+      };
+    }
+
+    if (toolName === 'set_interview_stage') {
+      const stage = parseStageCandidate(args.stage);
+      if (!stage) {
+        return { ok: false, message: 'Invalid stage for set_interview_stage.' };
+      }
+
+      const currentStage = interviewStageRef.current;
+      if (!canMoveToStage(currentStage, stage)) {
+        return {
+          ok: false,
+          message: `Invalid stage transition from ${currentStage} to ${stage}.`,
+        };
+      }
+
+      onInterviewStateUpdate({
+        stage,
+        checklist: [],
+      });
+      interviewStageRef.current = stage;
+      return {
+        ok: true,
+        message: `Interview stage set to ${stage}.`,
+        applied: { stage },
+      };
+    }
+
+    if (toolName === 'update_interview_checklist') {
+      const parsedUpdates = parseChecklistUpdates(args.updates);
+      if (parsedUpdates.length === 0) {
+        return {
+          ok: false,
+          message: 'No valid checklist updates provided.',
+        };
+      }
+
+      const validIds = new Set(
+        interviewChecklistRef.current.map((item) => item.id)
+      );
+      const filtered = parsedUpdates.filter((patch) =>
+        validIds.has(patch.itemId)
+      );
+
+      if (filtered.length === 0) {
+        return {
+          ok: false,
+          message: 'Checklist update item IDs are invalid for current session.',
+        };
+      }
+
+      onInterviewStateUpdate({
+        stage: interviewStageRef.current,
+        checklist: filtered,
+      });
+      applyChecklistToRef(filtered);
+      return {
+        ok: true,
+        message: `Updated ${filtered.length} checklist item(s).`,
+        applied: { count: filtered.length },
+      };
+    }
+
+    const score = parseScoreCandidate(args.score);
+    if (!score) {
+      return {
+        ok: false,
+        message: 'Invalid or missing score for complete_interview.',
+      };
+    }
+
+    onInterviewStateUpdate({
+      stage: 'completed',
+      checklist: [],
+      score: score as InterviewScore,
+    });
+    interviewStageRef.current = 'completed';
+
+    return {
+      ok: true,
+      message: 'Interview marked completed with final score.',
+      applied: { stage: 'completed', score },
+    };
+  };
+
+  const sendMessageWithToolLoop = async (
+    message: string | Part[],
+    opts?: { config?: Record<string, unknown> }
+  ) => {
+    const runtime = toolRuntimeRef.current;
+    if (!runtime) {
+      throw new Error('Tool runtime unavailable');
+    }
+
+    let response = await runtime.send({
+      message,
+      config: opts?.config,
+    });
+
+    if (!runtime.supportsTools) {
+      return response;
+    }
+
+    let guard = 0;
+    while (response.toolCalls.length > 0 && guard < 8) {
+      const functionResponses: RuntimeToolResponse[] = response.toolCalls.map(
+        (call) => {
+          const outcome = executeToolCall(call);
+          return {
+            id: call.id,
+            name: call.name,
+            payload: outcome.ok
+              ? {
+                  output: outcome,
+                }
+              : {
+                  error: outcome.message,
+                },
+          };
+        }
+      );
+
+      response = await runtime.sendToolResponses(functionResponses);
+      guard += 1;
+    }
+
+    if (guard === 8) {
+      debug('Tool loop hit max iterations; returning latest response.');
+    }
+
+    return response;
+  };
 
   const handleSendMessage = async (
     messageText: string,
@@ -415,12 +771,21 @@ export function useChatSession({
       const attachedCode = options?.codeSnapshot;
       const stageContext = [
         `Current stage: ${interviewStageLabel || 'Before Coding'}`,
+        'Current checklist status (use itemId exactly):',
+        ...(interviewChecklist ?? []).map(
+          (item) =>
+            `- ${item.id} [${item.stage}] = ${item.status}: ${item.label}`
+        ),
+        ...(interviewChecklist && interviewChecklist.length > 0
+          ? []
+          : ['- none']),
         ...(interviewMissingItems && interviewMissingItems.length > 0
           ? [
               'Missing checklist items:',
               ...interviewMissingItems.map((item) => `- ${item}`),
             ]
           : ['Missing checklist items: none']),
+        'If interview state changes, call tools. Do not emit custom state markup in response text.',
       ].join('\n');
 
       const messageForModel = attachedCode
@@ -441,16 +806,8 @@ export function useChatSession({
           ].join('\n')
         : `${stageContext}\n\nUser request: ${messageText}`;
 
-      const response = await chatSession.sendMessage({
-        message: messageForModel,
-      });
-      const aiText = response.text ?? '';
-
-      const parsedState = parseInterviewStateUpdateFromText(aiText);
-      if (parsedState && onInterviewStateUpdate) {
-        onInterviewStateUpdate(parsedState as InterviewStateUpdate);
-      }
-
+      const response = await sendMessageWithToolLoop(messageForModel);
+      const aiText = response.text;
       const cleanAiText = sanitizeAiDisplayText(aiText);
 
       const aiMessage: Message = {
@@ -516,7 +873,6 @@ export function useChatSession({
       const hintSystemPrompt = `${HINT_SYSTEM_PROMPT}\n\nThe user is working on: "${problemTitle}"`;
       const thinkingConfig = buildHintThinkingConfig(modelKey);
 
-      // One-off generation for hints (no conversation history)
       const response = await aiRef.current.models.generateContent({
         model: modelId,
         contents: hintQuestion,
@@ -597,18 +953,7 @@ export function useChatSession({
         kind === 'finish_and_rate'
           ? [
               'The interview has been marked complete by the user.',
-              'You are the source of truth for final scoring.',
-              'Provide a concise final evaluation with these sections:',
-              '- Final verdict (must be one of: Strong Hire, Hire, Weak Hire, Weak Reject, Reject, Strong Reject)',
-              '- Overall score (0-100)',
-              '- DSA',
-              '- Communication',
-              '- Coding',
-              '- Speed',
-              '- Testing',
-              '- Top strengths (2 bullets)',
-              '- Top improvements (2 bullets)',
-              'At the very end, include exactly one <INTERVIEW_STATE> block with stage=completed and populated score fields.',
+              'Call complete_interview exactly once with final score, then provide concise final evaluation text.',
               context.scoreSummary
                 ? `Current score summary: ${context.scoreSummary}`
                 : '',
@@ -617,18 +962,12 @@ export function useChatSession({
               .join('\n')
           : [
               `The user manually advanced from ${context.previousStageLabel} to ${context.nextStageLabel}.`,
-              `Acknowledge the transition and continue as a mock interviewer in ${context.nextStageLabel}.`,
-              'Ask one focused next-step question to keep momentum.',
+              'Do not move stage backward.',
+              'Acknowledge and ask one focused next-step question.',
             ].join('\n');
 
-      const response = await chatSession.sendMessage({
-        message: instruction,
-      });
-      const aiText = response.text ?? '';
-      const parsedState = parseInterviewStateUpdateFromText(aiText);
-      if (parsedState && onInterviewStateUpdate) {
-        onInterviewStateUpdate(parsedState as InterviewStateUpdate);
-      }
+      const response = await sendMessageWithToolLoop(instruction);
+      const aiText = response.text;
       const cleanAiText = sanitizeAiDisplayText(aiText);
 
       const aiMessage: Message = {
@@ -660,8 +999,6 @@ export function useChatSession({
   };
 
   const isReady = state.status === 'ready';
-
-  // Derive loading flag from state for backward compatibility
   const loading = state.status === 'initializing' || state.status === 'sending';
 
   const clearCurrentProblemHistory = () => {
