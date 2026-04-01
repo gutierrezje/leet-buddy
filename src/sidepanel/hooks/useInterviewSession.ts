@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
-  InterviewChecklistItem,
+  DerivedFinalAssessment,
+  InterviewEvidenceInput,
   InterviewSession,
-  InterviewStage,
   InterviewStateUpdate,
 } from '@/shared/types';
 import { isSubmissionAcceptedMessage } from '@/shared/types';
 import { createLogger } from '@/shared/utils/debug';
 import {
+  advanceInterviewStage,
+  buildFinalAssessmentSummary,
   canAdvanceStage,
-  computeInterviewScore,
   createInterviewSession,
+  finalizeInterviewSession,
   getChecklistByStage,
   getInterviewSessionKey,
   nextStage,
+  recordInterviewEvidence,
+  withInterviewRationale,
 } from '../interviewRubric';
 
 const debug = createLogger('useInterviewSession');
@@ -24,6 +28,29 @@ function persistSession(session: InterviewSession) {
     { [key]: session },
     () => void chrome.runtime.lastError
   );
+}
+
+function isInterviewSessionV2(value: unknown): value is InterviewSession {
+  if (!value || typeof value !== 'object') return false;
+  const session = value as InterviewSession;
+  return (
+    session.version === 2 &&
+    typeof session.slug === 'string' &&
+    Array.isArray(session.evidenceLog) &&
+    Boolean(session.derivedState)
+  );
+}
+
+function applyAndPersist(
+  prev: InterviewSession | null,
+  updater: (session: InterviewSession) => InterviewSession
+): InterviewSession | null {
+  if (!prev) return prev;
+  const next = updater(prev);
+  if (next !== prev) {
+    persistSession(next);
+  }
+  return next;
 }
 
 export function useInterviewSession(problemSlug?: string) {
@@ -37,8 +64,8 @@ export function useInterviewSession(problemSlug?: string) {
 
     const key = getInterviewSessionKey(problemSlug);
     chrome.storage.local.get([key], (data) => {
-      const stored = data[key] as InterviewSession | undefined;
-      if (stored?.slug === problemSlug) {
+      const stored = data[key];
+      if (isInterviewSessionV2(stored) && stored.slug === problemSlug) {
         setSession(stored);
         return;
       }
@@ -49,81 +76,65 @@ export function useInterviewSession(problemSlug?: string) {
     });
   }, [problemSlug]);
 
-  const updateChecklist = (
-    itemId: string,
-    status: InterviewChecklistItem['status'],
-    evidence?: string
-  ) => {
-    setSession((prev) => {
-      if (!prev) return prev;
-      const next: InterviewSession = {
-        ...prev,
-        updatedAt: Date.now(),
-        checklist: prev.checklist.map((item) => {
-          if (item.id !== itemId) return item;
-          return {
-            ...item,
-            status,
-            evidence: evidence
-              ? [...item.evidence, evidence].slice(-3)
-              : item.evidence,
-          };
-        }),
-      };
-      persistSession(next);
-      return next;
-    });
-  };
+  const appendEvidence = useCallback((events: InterviewEvidenceInput[]) => {
+    setSession((prev) =>
+      applyAndPersist(prev, (current) =>
+        recordInterviewEvidence(current, events)
+      )
+    );
+  }, []);
 
   const markCodingDetected = useCallback(() => {
-    setSession((prev) => {
-      if (!prev) return prev;
-      if (prev.stage !== 'before_coding') return prev;
+    setSession((prev) =>
+      applyAndPersist(prev, (current) => {
+        if (current.derivedState.stage !== 'before_coding') return current;
 
-      const goAheadDone = prev.checklist.some(
-        (item) => item.id === 'before_go_ahead' && item.status === 'done'
-      );
+        const events: InterviewEvidenceInput[] = [
+          {
+            kind: 'coding_started',
+            source: 'code',
+            snippet: 'Candidate code changed from the captured baseline.',
+            confidence: 0.95,
+            stageHint: 'during_coding',
+          },
+        ];
 
-      const next: InterviewSession = {
-        ...prev,
-        stage: 'during_coding',
-        updatedAt: Date.now(),
-        goAheadViolated: prev.goAheadViolated || !goAheadDone,
-        checklist: prev.checklist.map((item) => {
-          if (item.id !== 'before_go_ahead') return item;
-          if (goAheadDone) return item;
-          return {
-            ...item,
-            status: 'pending',
-            evidence: [
-              ...item.evidence,
-              'Coding was detected before explicit GO-AHEAD.',
-            ].slice(-3),
-          };
-        }),
-      };
+        if (
+          !current.derivedState.coverage.some(
+            (item) => item.id === 'before_go_ahead' && item.status === 'done'
+          )
+        ) {
+          events.push({
+            kind: 'early_coding_violation',
+            source: 'system',
+            snippet: 'Coding was detected before explicit GO-AHEAD.',
+            confidence: 1,
+            stageHint: 'before_coding',
+          });
+        }
 
-      persistSession(next);
-      return next;
-    });
+        return recordInterviewEvidence(current, events);
+      })
+    );
   }, []);
 
   const setBaselineNonCommentFingerprint = useCallback(
     (fingerprint?: string) => {
       if (!fingerprint) return;
-      setSession((prev) => {
-        if (!prev) return prev;
-        if (prev.baselineNonCommentFingerprint === fingerprint) return prev;
+      setSession((prev) =>
+        applyAndPersist(prev, (current) => {
+          if (current.baselineNonCommentFingerprint === fingerprint) {
+            return current;
+          }
 
-        const next: InterviewSession = {
-          ...prev,
-          baselineNonCommentFingerprint:
-            prev.baselineNonCommentFingerprint || fingerprint,
-          updatedAt: Date.now(),
-        };
-        persistSession(next);
-        return next;
-      });
+          return {
+            ...current,
+            baselineNonCommentFingerprint:
+              current.baselineNonCommentFingerprint || fingerprint,
+            updatedAt: Date.now(),
+          };
+        })
+      );
     },
     []
   );
@@ -138,20 +149,26 @@ export function useInterviewSession(problemSlug?: string) {
   );
 
   const markSubmissionDetected = useCallback(() => {
-    setSession((prev) => {
-      if (!prev) return prev;
-      if (prev.stage === 'after_coding' || prev.stage === 'completed')
-        return prev;
+    setSession((prev) =>
+      applyAndPersist(prev, (current) => {
+        if (
+          current.derivedState.stage === 'after_coding' ||
+          current.derivedState.stage === 'completed'
+        ) {
+          return current;
+        }
 
-      const next: InterviewSession = {
-        ...prev,
-        stage: 'after_coding',
-        updatedAt: Date.now(),
-      };
-
-      persistSession(next);
-      return next;
-    });
+        return recordInterviewEvidence(current, [
+          {
+            kind: 'submission_detected',
+            source: 'system',
+            snippet: 'An accepted submission was detected.',
+            confidence: 1,
+            stageHint: 'after_coding',
+          },
+        ]);
+      })
+    );
   }, []);
 
   useEffect(() => {
@@ -166,69 +183,62 @@ export function useInterviewSession(problemSlug?: string) {
   }, [problemSlug, markSubmissionDetected]);
 
   const applyStateUpdate = (update: InterviewStateUpdate) => {
-    setSession((prev) => {
-      if (!prev) return prev;
+    setSession((prev) =>
+      applyAndPersist(prev, (current) => {
+        let next = current;
 
-      const stage: InterviewStage = update.stage;
-      const nextChecklist = prev.checklist.map((item) => {
-        const patch = update.checklist.find(
-          (entry) => entry.itemId === item.id
-        );
-        if (!patch) return item;
-        return {
-          ...item,
-          status: patch.status,
-          evidence: patch.evidence
-            ? [...item.evidence, patch.evidence].slice(-3)
-            : item.evidence,
-        };
-      });
+        if (update.events && update.events.length > 0) {
+          next = recordInterviewEvidence(next, update.events);
+        }
 
-      const next: InterviewSession = {
-        ...prev,
-        stage,
-        checklist: nextChecklist,
-        updatedAt: Date.now(),
-        completedAt:
-          stage === 'completed'
-            ? prev.completedAt || Date.now()
-            : prev.completedAt,
-        score: update.score ?? prev.score,
-      };
+        if (update.suggestedStage) {
+          next = advanceInterviewStage(
+            next,
+            update.suggestedStage,
+            'llm',
+            update.stageReason ||
+              `Suggested transition to ${update.suggestedStage}.`
+          );
+        }
 
-      persistSession(next);
-      return next;
-    });
+        if (update.finalRecommendation || next.finalAssessment) {
+          next = finalizeInterviewSession(
+            next,
+            update.finalRecommendation ?? next.finalAssessment?.recommendation,
+            update.finalRationale ?? next.finalAssessment?.rationale
+          );
+        }
+
+        if (update.finalRationale && next.finalAssessment) {
+          next = withInterviewRationale(next, update.finalRationale);
+        }
+
+        return next;
+      })
+    );
   };
 
   const advanceStage = () => {
-    setSession((prev) => {
-      if (!prev) return prev;
-
-      const next = {
-        ...prev,
-        stage: nextStage(prev.stage),
-        updatedAt: Date.now(),
-      };
-      persistSession(next);
-      return next;
-    });
+    setSession((prev) =>
+      applyAndPersist(prev, (current) => {
+        const target = nextStage(current.derivedState.stage);
+        if (target !== 'during_coding' && target !== 'after_coding') {
+          return current;
+        }
+        return advanceInterviewStage(
+          current,
+          target,
+          'ui',
+          `User advanced the interview to ${target}.`
+        );
+      })
+    );
   };
 
   const completeWithoutScore = () => {
-    setSession((prev) => {
-      if (!prev) return prev;
-      const computedScore = computeInterviewScore(prev);
-      const next: InterviewSession = {
-        ...prev,
-        stage: 'completed',
-        completedAt: Date.now(),
-        updatedAt: Date.now(),
-        score: computedScore,
-      };
-      persistSession(next);
-      return next;
-    });
+    setSession((prev) =>
+      applyAndPersist(prev, (current) => finalizeInterviewSession(current))
+    );
   };
 
   const resetSession = () => {
@@ -239,29 +249,35 @@ export function useInterviewSession(problemSlug?: string) {
   };
 
   const stageChecklist = useMemo(() => {
-    if (!session || session.stage === 'completed') return [];
-    return getChecklistByStage(session, session.stage);
+    if (!session || session.derivedState.stage === 'completed') return [];
+    return getChecklistByStage(session, session.derivedState.stage);
   }, [session]);
 
   const canAdvance = session ? canAdvanceStage(session) : false;
+  const deterministicFinalAssessment: DerivedFinalAssessment | undefined =
+    useMemo(() => {
+      if (!session) return undefined;
+      return buildFinalAssessmentSummary(session);
+    }, [session]);
 
   useEffect(() => {
     if (!session) return;
-    debug('Interview stage: %s', session.stage);
+    debug('Interview stage: %s', session.derivedState.stage);
   }, [session]);
 
   return {
     session,
     stageChecklist,
     canAdvance,
-    updateChecklist,
     applyStateUpdate,
+    appendEvidence,
     markCodingDetected,
     setBaselineNonCommentFingerprint,
     hasCandidateCodeChangedFromBaseline,
     markSubmissionDetected,
     advanceStage,
     completeWithoutScore,
+    deterministicFinalAssessment,
     resetSession,
   };
 }

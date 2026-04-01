@@ -1,5 +1,5 @@
 import { Settings } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CurrentCodeSnapshot } from '@/shared/types';
 import ApiKeyError from './components/ApiKeyError';
 import ChatPane from './components/ChatPane';
@@ -16,7 +16,6 @@ import { useChatSession } from './hooks/useChatSession';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useProblemContext } from './hooks/useProblemContext';
 import { useSubmissionFlow } from './hooks/useSubmissionFlow';
-import { computeInterviewScore } from './interviewRubric';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'interview' | 'review'>(
@@ -47,33 +46,18 @@ export default function App() {
   const {
     session: interviewSession,
     stageChecklist,
-    updateChecklist,
+    canAdvance,
     applyStateUpdate,
     markCodingDetected,
     setBaselineNonCommentFingerprint,
     hasCandidateCodeChangedFromBaseline,
     advanceStage,
     completeWithoutScore,
+    deterministicFinalAssessment,
     resetSession,
   } = useInterviewSession(currentProblem?.slug);
-
-  const stageLabelMap = {
-    before_coding: 'Before Coding',
-    during_coding: 'During Coding',
-    after_coding: 'After Coding',
-    completed: 'Completed',
-  } as const;
-
-  const interviewStageLabel = interviewSession
-    ? stageLabelMap[interviewSession.stage]
-    : 'Before Coding';
-  const interviewMissingItems = useMemo(
-    () =>
-      stageChecklist
-        .filter((item) => item.status !== 'done')
-        .map((item) => item.label),
-    [stageChecklist]
-  );
+  const interviewStageLabel =
+    interviewSession?.derivedState.stageLabel ?? 'Before Coding';
 
   const looksLikeRealCode = useCallback(
     (snapshot: CurrentCodeSnapshot): boolean => {
@@ -87,7 +71,7 @@ export default function App() {
     if (currentCodeSnapshot.slug !== currentProblem.slug) return;
 
     if (
-      interviewSession.stage === 'before_coding' &&
+      interviewSession.derivedState.stage === 'before_coding' &&
       !interviewSession.baselineNonCommentFingerprint
     ) {
       setBaselineNonCommentFingerprint(
@@ -96,7 +80,7 @@ export default function App() {
       return;
     }
 
-    if (interviewSession.stage !== 'before_coding') return;
+    if (interviewSession.derivedState.stage !== 'before_coding') return;
     if (!looksLikeRealCode(currentCodeSnapshot)) return;
     if (
       !hasCandidateCodeChangedFromBaseline(
@@ -131,11 +115,9 @@ export default function App() {
     apiKey,
     problemSlug: currentProblem?.slug,
     problemTitle: currentProblem?.title,
-    interviewStage: interviewSession?.stage,
-    interviewStageLabel,
-    interviewMissingItems,
-    interviewChecklist: interviewSession?.checklist,
-    finalScore: interviewSession?.score,
+    interviewState: interviewSession?.derivedState,
+    finalAssessment:
+      interviewSession?.finalAssessment ?? deterministicFinalAssessment,
     onInterviewStateUpdate: applyStateUpdate,
   });
 
@@ -228,8 +210,8 @@ export default function App() {
   };
 
   const handleAdvanceStageFromUi = () => {
-    if (!chatReady) return;
-    const from = interviewSession?.stage;
+    if (!chatReady || !canAdvance) return;
+    const from = interviewSession?.derivedState.stage;
     const prevLabel = interviewStageLabel;
     const nextLabel =
       from === 'before_coding'
@@ -247,15 +229,12 @@ export default function App() {
 
   const handleFinishAndRateFromUi = () => {
     if (!chatReady) return;
-    const localScore = interviewSession
-      ? computeInterviewScore(interviewSession)
-      : undefined;
+    const localScore =
+      interviewSession?.finalAssessment ?? deterministicFinalAssessment;
     completeWithoutScore();
     handleInterviewEvent('finish_and_rate', {
       previousStageLabel: 'After Coding',
-      scoreSummary: localScore
-        ? `SCORE_SUMMARY::${JSON.stringify(localScore)}`
-        : undefined,
+      scoreSummary: localScore ? localScore.summaryToken : undefined,
     });
   };
 
@@ -349,9 +328,7 @@ export default function App() {
               <InterviewProgressCard
                 session={interviewSession}
                 stageChecklist={stageChecklist}
-                onSetStatus={(itemId, status) =>
-                  updateChecklist(itemId, status)
-                }
+                canAdvance={canAdvance}
                 onAdvance={handleAdvanceStageFromUi}
                 onComplete={handleFinishAndRateFromUi}
                 onReset={resetSession}

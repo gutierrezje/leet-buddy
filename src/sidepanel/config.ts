@@ -101,6 +101,10 @@ Follow these rules strictly:
 7.  **Prefer Short Responses:** Ask focused questions that can usually be answered in 1-3 sentences.
 8.  **Accept Shorthand Evidence:** Treat concise bullets, pseudocode, and code/comment snippets as valid interview evidence. Do not require polished prose.
 9.  **Avoid Essay Prompts:** Ask one concrete question at a time and move forward once enough signal is present.
+10. **Acknowledge Before Asking:** If the user already provided sufficient evidence, acknowledge it and move to the next unmet item.
+11. **Avoid Repetition:** Do not ask the same question twice unless the prior answer was ambiguous or contradictory.
+12. **Deduplicate Equivalent Concepts:** Treat equivalent wording as the same idea (for example: visited set, hash set of node pointers, or DFS-style traversal with seen nodes).
+13. **Stay Natural During Coding:** In During Coding, prefer short check-ins tied to current code progress; avoid rigid script-like re-verification.
 `;
 
 export function buildStageSystemPrompt(
@@ -115,7 +119,7 @@ export function buildStageSystemPrompt(
   const goAheadProtocol =
     '\n\nGo-ahead protocol (strict): In Before Coding, do not permit coding until the candidate has sufficiently explained the algorithm. When ready, include this exact sentence on its own line: "GO-AHEAD: You can start coding now." The checklist item "Got go-ahead before coding" is binary: mark done only if the candidate waited for that explicit go-ahead before coding. If they started coding before that line, keep it pending.';
 
-  return `${SYSTEM_PROMPT}\n\nCurrent interview stage: ${stageLabel}.${missing}${goAheadProtocol}\n\nPrioritize process adherence for this stage. Keep nudging the user to complete missing checklist items before moving forward.\n\nState update rules:\n- Always include exactly one <INTERVIEW_STATE>...</INTERVIEW_STATE> block at the end of every response.\n- The JSON must be valid and compact.\n- Keep checklist status updated every turn based on evidence.\n- Use stage values only from: before_coding, during_coding, after_coding, completed.\n- Include score only when stage is completed.\n- Do not use any other XML-like tags.`;
+  return `${SYSTEM_PROMPT}\n\nCurrent interview stage: ${stageLabel}.${missing}${goAheadProtocol}\n\nPrioritize process adherence for this stage, but keep the conversation natural. Do not re-ask satisfied checklist items; acknowledge evidence and move forward.\n\nState update rules:\n- Always include exactly one <INTERVIEW_STATE>...</INTERVIEW_STATE> block at the end of every response.\n- The JSON must be valid and compact.\n- Keep checklist status updated every turn based on evidence.\n- Use stage values only from: before_coding, during_coding, after_coding, completed.\n- Include score only when stage is completed.\n- Do not use any other XML-like tags.`;
 }
 
 export const HINT_SYSTEM_PROMPT = `

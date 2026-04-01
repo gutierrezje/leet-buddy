@@ -14,7 +14,10 @@ import {
 } from '@/shared/chatHistory';
 import type {
   CurrentCodeSnapshot,
-  InterviewChecklistItem,
+  DerivedFinalAssessment,
+  DerivedInterviewState,
+  InterviewEvidenceInput,
+  InterviewEvidenceKind,
   InterviewScore,
   InterviewStage,
   InterviewStateUpdate,
@@ -23,17 +26,22 @@ import type {
 import { createLogger } from '@/shared/utils/debug';
 import {
   GEMINI_MODELS,
-  type GeminiModelKey,
   HINT_SYSTEM_PROMPT,
   SYSTEM_PROMPT,
   THINKING_BUDGETS,
+  type GeminiModelKey,
   type ThinkingBudgetKey,
   type ThinkingLevel,
 } from '../config';
 import initialMessages from '../data/messages.json';
 import {
+  INTERVIEW_EVIDENCE_KINDS,
+  parseFinalAssessmentToken,
+} from '../interviewRubric';
+import {
   type ChatToolRuntime,
   createToolRuntime,
+  type RuntimeResponse,
   type RuntimeToolCall,
   type RuntimeToolResponse,
 } from '../llm/toolRuntime';
@@ -44,32 +52,66 @@ interface UseChatSessionProps {
   apiKey: string;
   problemSlug: string | undefined;
   problemTitle: string | undefined;
-  interviewStage?: InterviewStage;
-  interviewStageLabel?: string;
-  interviewMissingItems?: string[];
-  interviewChecklist?: InterviewChecklistItem[];
-  finalScore?: InterviewScore;
+  interviewState?: DerivedInterviewState;
+  finalAssessment?: DerivedFinalAssessment;
   onInterviewStateUpdate?: (update: InterviewStateUpdate) => void;
 }
 
 type InterviewEventKind = 'stage_advance' | 'finish_and_rate';
 
 type InterviewToolName =
-  | 'set_interview_stage'
-  | 'update_interview_checklist'
+  | 'record_interview_evidence'
+  | 'suggest_interview_stage'
   | 'complete_interview';
 
 const INTERVIEW_TOOL_DECLARATIONS: FunctionDeclaration[] = [
   {
-    name: 'set_interview_stage',
+    name: 'record_interview_evidence',
     description:
-      'Move interview stage forward when candidate progresses to a new phase.',
+      'Capture one or more normalized observations about the candidate or interview state.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        events: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            properties: {
+              kind: {
+                type: 'string',
+                enum: INTERVIEW_EVIDENCE_KINDS,
+              },
+              stageHint: {
+                type: 'string',
+                enum: ['before_coding', 'during_coding', 'after_coding'],
+              },
+              snippet: { type: 'string' },
+              confidence: { type: 'number' },
+              payload: {
+                type: 'object',
+                additionalProperties: true,
+              },
+            },
+            required: ['kind', 'snippet'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['events'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'suggest_interview_stage',
+    description:
+      'Suggest moving the interview stage forward once the current stage has enough evidence.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
         stage: {
           type: 'string',
-          enum: ['before_coding', 'during_coding', 'after_coding'],
+          enum: ['during_coding', 'after_coding'],
         },
         reason: { type: 'string' },
       },
@@ -78,35 +120,9 @@ const INTERVIEW_TOOL_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
-    name: 'update_interview_checklist',
-    description:
-      'Update one or more interview checklist item statuses with optional evidence.',
-    parametersJsonSchema: {
-      type: 'object',
-      properties: {
-        updates: {
-          type: 'array',
-          minItems: 1,
-          items: {
-            type: 'object',
-            properties: {
-              itemId: { type: 'string' },
-              status: { type: 'string', enum: ['pending', 'partial', 'done'] },
-              evidence: { type: 'string' },
-            },
-            required: ['itemId', 'status'],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ['updates'],
-      additionalProperties: false,
-    },
-  },
-  {
     name: 'complete_interview',
     description:
-      'Finalize interview with a recommendation and concise rationale.',
+      'Finalize the interview with a bounded recommendation using the deterministic assessment token.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
@@ -129,25 +145,20 @@ const INTERVIEW_TOOL_DECLARATIONS: FunctionDeclaration[] = [
   },
 ];
 
-const STAGE_ORDER: InterviewStage[] = [
-  'before_coding',
-  'during_coding',
-  'after_coding',
-  'completed',
-];
+type ToolExecutionResult = {
+  ok: boolean;
+  message: string;
+  applied?: Record<string, unknown>;
+};
 
-const SCORE_SUMMARY_PREFIX = 'SCORE_SUMMARY::';
+type ExecutedToolResult = {
+  name: string;
+  ok: boolean;
+};
 
-function parseScoreSummaryPayload(value: string): InterviewScore | null {
-  if (!value.startsWith(SCORE_SUMMARY_PREFIX)) return null;
-  const raw = value.slice(SCORE_SUMMARY_PREFIX.length);
-  try {
-    const parsed = JSON.parse(raw) as InterviewScore;
-    return parseScoreCandidate(parsed) as InterviewScore;
-  } catch {
-    return null;
-  }
-}
+type ToolLoopResult = RuntimeResponse & {
+  executedTools: ExecutedToolResult[];
+};
 
 type ParsedFinalScore = {
   dsa: number;
@@ -165,17 +176,28 @@ type ParsedFinalScore = {
     | 'Strong Reject';
 };
 
-type ToolExecutionResult = {
-  ok: boolean;
-  message: string;
-  applied?: Record<string, unknown>;
+type HistoryIndexEntry = {
+  slug: string;
+  lastAccessedAt: number;
 };
 
-type ParsedChecklistPatch = {
-  itemId: string;
-  status: 'pending' | 'partial' | 'done';
-  evidence?: string;
-};
+type EvidencePayload = Record<string, string | number | boolean | string[]>;
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object') return {};
+  return value as Record<string, unknown>;
+}
+
+function sanitizeAiDisplayText(text: string): string {
+  return text.trim();
+}
+
+function buildCompletionFallbackMessage(
+  assessment?: Pick<InterviewScore, 'recommendation'>
+): string {
+  if (!assessment) return 'Interview completed.';
+  return `Interview completed. Recommendation: ${assessment.recommendation}.`;
+}
 
 function parseRecommendationCandidate(
   value: unknown
@@ -222,103 +244,81 @@ function parseScoreCandidate(value: unknown): ParsedFinalScore | undefined {
   return parsed;
 }
 
-function sanitizeAiDisplayText(text: string): string {
-  return text
-    .replace(/\n?<system-reminder>[\s\S]*?<\/system-reminder>\n?/gi, '\n')
-    .trim();
-}
-
-function isGemini25Model(modelKey: GeminiModelKey): boolean {
-  return GEMINI_MODELS[modelKey].id.startsWith('gemini-2.5-');
-}
-
-function canMoveToStage(
-  current: InterviewStage,
-  next: Exclude<InterviewStage, 'completed'>
-): boolean {
-  const currentIdx = STAGE_ORDER.indexOf(current);
-  const nextIdx = STAGE_ORDER.indexOf(next);
-  if (currentIdx === -1 || nextIdx === -1) return false;
-  return nextIdx >= currentIdx;
-}
-
 function sanitizeToolName(value: unknown): InterviewToolName | null {
-  if (value === 'set_interview_stage') return 'set_interview_stage';
-  if (value === 'update_interview_checklist')
-    return 'update_interview_checklist';
+  if (value === 'record_interview_evidence') return 'record_interview_evidence';
+  if (value === 'suggest_interview_stage') return 'suggest_interview_stage';
   if (value === 'complete_interview') return 'complete_interview';
   return null;
 }
 
-function asObject(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object') return {};
-  return value as Record<string, unknown>;
-}
-
-function parseChecklistUpdates(value: unknown): ParsedChecklistPatch[] {
-  if (!Array.isArray(value)) return [];
-  const parsed = value
-    .map((entry) => asObject(entry))
-    .map((entry): ParsedChecklistPatch | null => {
-      const itemId = entry.itemId;
-      const status = entry.status;
-      const evidence = entry.evidence;
-      if (typeof itemId !== 'string') return null;
-      if (status !== 'pending' && status !== 'partial' && status !== 'done') {
-        return null;
-      }
-      return {
-        itemId,
-        status,
-        evidence: typeof evidence === 'string' ? evidence : undefined,
-      };
-    });
-
-  return parsed.filter((item): item is ParsedChecklistPatch => item !== null);
-}
-
 function parseStageCandidate(
   value: unknown
-): Exclude<InterviewStage, 'completed'> | null {
-  if (value === 'before_coding') return 'before_coding';
+): Exclude<InterviewStage, 'before_coding' | 'completed'> | null {
   if (value === 'during_coding') return 'during_coding';
   if (value === 'after_coding') return 'after_coding';
   return null;
 }
 
-// Typed state boundaries for chat session
-type ChatState =
-  | { status: 'idle' }
-  | { status: 'initializing' }
-  | { status: 'ready' }
-  | { status: 'sending'; pendingMessageId: string }
-  | { status: 'error'; error: string };
+function sanitizePayload(value: unknown): EvidencePayload | undefined {
+  const payload = asObject(value);
+  const entries = Object.entries(payload).filter(([, entryValue]) => {
+    if (typeof entryValue === 'string') return true;
+    if (typeof entryValue === 'number') return true;
+    if (typeof entryValue === 'boolean') return true;
+    if (Array.isArray(entryValue)) {
+      return entryValue.every((item) => typeof item === 'string');
+    }
+    return false;
+  });
 
-type ChatAction =
-  | { type: 'INITIALIZE_START' }
-  | { type: 'INITIALIZE_SUCCESS' }
-  | { type: 'CLEAR' }
-  | { type: 'SEND_START'; pendingMessageId: string }
-  | { type: 'SEND_SUCCESS' }
-  | { type: 'SEND_ERROR'; error: string };
+  if (entries.length === 0) return undefined;
+  return Object.fromEntries(entries) as EvidencePayload;
+}
 
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
-  switch (action.type) {
-    case 'INITIALIZE_START':
-      return { status: 'initializing' };
-    case 'INITIALIZE_SUCCESS':
-      return { status: 'ready' };
-    case 'CLEAR':
-      return { status: 'idle' };
-    case 'SEND_START':
-      return { status: 'sending', pendingMessageId: action.pendingMessageId };
-    case 'SEND_SUCCESS':
-      return { status: 'ready' };
-    case 'SEND_ERROR':
-      return { status: 'error', error: action.error };
-    default:
-      return state;
-  }
+function parseEvidenceEvents(value: unknown): InterviewEvidenceInput[] {
+  if (!Array.isArray(value)) return [];
+
+  const kinds = new Set(INTERVIEW_EVIDENCE_KINDS);
+
+  return value
+    .map((entry) => asObject(entry))
+    .map((entry): InterviewEvidenceInput | null => {
+      const kind = entry.kind;
+      const stageHint = entry.stageHint;
+      const snippet = entry.snippet;
+      const confidence = entry.confidence;
+
+      if (
+        typeof kind !== 'string' ||
+        !kinds.has(kind as InterviewEvidenceKind)
+      ) {
+        return null;
+      }
+      if (typeof snippet !== 'string' || snippet.trim().length === 0) {
+        return null;
+      }
+
+      return {
+        kind: kind as InterviewEvidenceKind,
+        stageHint:
+          stageHint === 'before_coding' ||
+          stageHint === 'during_coding' ||
+          stageHint === 'after_coding'
+            ? stageHint
+            : undefined,
+        snippet,
+        confidence:
+          typeof confidence === 'number'
+            ? Math.max(0, Math.min(1, confidence))
+            : 0.75,
+        payload: sanitizePayload(entry.payload),
+      };
+    })
+    .filter((event): event is InterviewEvidenceInput => event !== null);
+}
+
+function isGemini25Model(modelKey: GeminiModelKey): boolean {
+  return GEMINI_MODELS[modelKey].id.startsWith('gemini-2.5-');
 }
 
 function buildThinkingConfig(
@@ -346,11 +346,6 @@ function buildHintThinkingConfig(
   }
   return { thinkingBudget: 1024 };
 }
-
-type HistoryIndexEntry = {
-  slug: string;
-  lastAccessedAt: number;
-};
 
 function sanitizeHistoryMessages(value: unknown): Message[] {
   if (!Array.isArray(value)) return [];
@@ -406,15 +401,110 @@ function getEvictedSlugs(
     .filter((slug) => !nextSet.has(slug));
 }
 
+function buildInterviewPromptPreamble(problemTitle: string): string {
+  return [
+    SYSTEM_PROMPT.trim(),
+    '',
+    `The user is currently working on the following problem: "${problemTitle}".`,
+    'Interview tool policy:',
+    '- Use record_interview_evidence whenever the candidate demonstrates a concrete signal.',
+    '- Prefer normalized evidence over rubric updates or prose-only state.',
+    '- Use suggest_interview_stage only when the current stage is truly complete.',
+    '- Use complete_interview only when the user explicitly finishes the interview.',
+    '- Ask one focused next-step question at a time.',
+    'Normalized evidence kinds:',
+    ...INTERVIEW_EVIDENCE_KINDS.map((kind) => `- ${kind}`),
+    'Payload hints:',
+    '- For approaches, use payload.approach when possible.',
+    '- For complexity, use payload.value with the claimed complexity.',
+    '- For edge cases, use payload.edgeCases with concise examples.',
+  ].join('\n');
+}
+
+function buildStatePacket(state?: DerivedInterviewState): string {
+  if (!state) {
+    return [
+      'Current interview state: Before Coding',
+      'No interview evidence has been stored yet.',
+      'Preferred next focus: establish the candidate’s understanding before coding.',
+    ].join('\n');
+  }
+
+  return [
+    `Current interview state: ${state.stageLabel}`,
+    `Preferred next focus: ${state.nextFollowUp ?? 'Continue naturally based on the candidate’s latest answer.'}`,
+    'Already acknowledged accomplishments:',
+    ...(state.acknowledgedAccomplishments.length > 0
+      ? state.acknowledgedAccomplishments.map((item) => `- ${item}`)
+      : ['- none']),
+    'Observed strengths:',
+    ...(state.strengths.length > 0
+      ? state.strengths.map((item) => `- ${item}`)
+      : ['- none']),
+    'Current gaps:',
+    ...(state.missingAreas.length > 0
+      ? state.missingAreas.map((item) => `- ${item}`)
+      : ['- none']),
+    'Recent high-signal evidence:',
+    ...(state.recentEvidence.length > 0
+      ? state.recentEvidence.map((item) => `- ${item}`)
+      : ['- none']),
+    state.approachSummary.selected
+      ? `Chosen approach: ${state.approachSummary.selected}`
+      : 'Chosen approach: not yet established',
+    state.complexityClaims.time
+      ? `Time complexity claimed: ${state.complexityClaims.time}`
+      : 'Time complexity claimed: not yet established',
+    state.complexityClaims.space
+      ? `Space complexity claimed: ${state.complexityClaims.space}`
+      : 'Space complexity claimed: not yet established',
+    state.edgeCasesMentioned.length > 0
+      ? `Edge cases mentioned: ${state.edgeCasesMentioned.join('; ')}`
+      : 'Edge cases mentioned: none captured yet',
+    'If you capture new evidence or decide the stage is ready to move forward, call a tool.',
+  ].join('\n');
+}
+
+type ChatState =
+  | { status: 'idle' }
+  | { status: 'initializing' }
+  | { status: 'ready' }
+  | { status: 'sending'; pendingMessageId: string }
+  | { status: 'error'; error: string };
+
+type ChatAction =
+  | { type: 'INITIALIZE_START' }
+  | { type: 'INITIALIZE_SUCCESS' }
+  | { type: 'CLEAR' }
+  | { type: 'SEND_START'; pendingMessageId: string }
+  | { type: 'SEND_SUCCESS' }
+  | { type: 'SEND_ERROR'; error: string };
+
+function chatReducer(state: ChatState, action: ChatAction): ChatState {
+  switch (action.type) {
+    case 'INITIALIZE_START':
+      return { status: 'initializing' };
+    case 'INITIALIZE_SUCCESS':
+      return { status: 'ready' };
+    case 'CLEAR':
+      return { status: 'idle' };
+    case 'SEND_START':
+      return { status: 'sending', pendingMessageId: action.pendingMessageId };
+    case 'SEND_SUCCESS':
+      return { status: 'ready' };
+    case 'SEND_ERROR':
+      return { status: 'error', error: action.error };
+    default:
+      return state;
+  }
+}
+
 export function useChatSession({
   apiKey,
   problemSlug,
   problemTitle,
-  interviewStage,
-  interviewStageLabel,
-  interviewMissingItems,
-  interviewChecklist,
-  finalScore,
+  interviewState,
+  finalAssessment,
   onInterviewStateUpdate,
 }: UseChatSessionProps) {
   const [messages, setMessages] = useState<Message[]>(
@@ -429,23 +519,20 @@ export function useChatSession({
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>('medium');
   const [thinkingBudget, setThinkingBudget] =
     useState<ThinkingBudgetKey>('medium');
-
-  const interviewStageRef = useRef<InterviewStage>(
-    interviewStage ?? 'before_coding'
+  const interviewStateRef = useRef<DerivedInterviewState | undefined>(
+    interviewState
   );
-  const interviewChecklistRef = useRef<InterviewChecklistItem[]>(
-    interviewChecklist ?? []
+  const finalAssessmentRef = useRef<DerivedFinalAssessment | undefined>(
+    finalAssessment
   );
 
   useEffect(() => {
-    if (interviewStage) {
-      interviewStageRef.current = interviewStage;
-    }
-  }, [interviewStage]);
+    interviewStateRef.current = interviewState;
+  }, [interviewState]);
 
   useEffect(() => {
-    interviewChecklistRef.current = interviewChecklist ?? [];
-  }, [interviewChecklist]);
+    finalAssessmentRef.current = finalAssessment;
+  }, [finalAssessment]);
 
   useEffect(() => {
     if (!problemSlug) return;
@@ -528,14 +615,7 @@ export function useChatSession({
     aiRef.current = ai;
 
     const modelId = GEMINI_MODELS[modelKey].id;
-    const checklistGuide = (interviewChecklist ?? [])
-      .map(
-        (item) => `- ${item.id} [${item.stage}] = ${item.status}: ${item.label}`
-      )
-      .join('\n');
-
-    const dynamicSystemPrompt = `${SYSTEM_PROMPT}\n\nThe user is currently working on the following problem: "${problemTitle}". Tailor your guidance to this specific problem.\n\nChecklist source of truth:\n${checklistGuide || '- (no checklist loaded)'}\n\nState policy:\n- Keep interview state accurate every turn.\n- When state should change, call a function tool instead of emitting state markup.\n- Use only checklist item IDs from the source-of-truth list.\n- Only move stage forward.`;
-
+    const dynamicSystemPrompt = buildInterviewPromptPreamble(problemTitle);
     const thinkingConfig = buildThinkingConfig(
       modelKey,
       thinkingLevel,
@@ -574,34 +654,13 @@ export function useChatSession({
       toolDeclarations: INTERVIEW_TOOL_DECLARATIONS,
     });
     dispatch({ type: 'INITIALIZE_SUCCESS' });
-  }, [
-    apiKey,
-    problemTitle,
-    modelKey,
-    thinkingLevel,
-    thinkingBudget,
-    interviewChecklist,
-  ]);
-
-  const applyChecklistToRef = (updates: ParsedChecklistPatch[]) => {
-    if (updates.length === 0) return;
-    const patchMap = new Map(
-      updates.map((patch) => [patch.itemId, patch.status] as const)
-    );
-    interviewChecklistRef.current = interviewChecklistRef.current.map((item) =>
-      patchMap.has(item.id)
-        ? { ...item, status: patchMap.get(item.id) ?? item.status }
-        : item
-    );
-  };
+  }, [apiKey, problemTitle, modelKey, thinkingLevel, thinkingBudget]);
 
   const executeToolCall = (call: RuntimeToolCall): ToolExecutionResult => {
     const toolName = sanitizeToolName(call.name);
     if (!toolName) {
       return { ok: false, message: 'Unknown tool name.' };
     }
-
-    const args = asObject(call.args);
 
     if (!onInterviewStateUpdate) {
       return {
@@ -610,97 +669,47 @@ export function useChatSession({
       };
     }
 
-    if (toolName === 'set_interview_stage') {
-      const stage = parseStageCandidate(args.stage);
-      if (!stage) {
-        return { ok: false, message: 'Invalid stage for set_interview_stage.' };
-      }
+    const args = asObject(call.args);
 
-      const currentStage = interviewStageRef.current;
-      if (!canMoveToStage(currentStage, stage)) {
-        return {
-          ok: false,
-          message: `Invalid stage transition from ${currentStage} to ${stage}.`,
-        };
+    if (toolName === 'record_interview_evidence') {
+      const parsedEvents = parseEvidenceEvents(args.events).map((event) => ({
+        ...event,
+        source: 'llm' as const,
+      }));
+      if (parsedEvents.length === 0) {
+        return { ok: false, message: 'No valid evidence events provided.' };
       }
 
       onInterviewStateUpdate({
-        stage,
-        checklist: [],
+        events: parsedEvents,
       });
-      interviewStageRef.current = stage;
       return {
         ok: true,
-        message: `Interview stage set to ${stage}.`,
-        applied: { stage },
+        message: `Recorded ${parsedEvents.length} evidence event(s).`,
+        applied: { count: parsedEvents.length },
       };
     }
 
-    if (toolName === 'update_interview_checklist') {
-      const parsedUpdates = parseChecklistUpdates(args.updates);
-      if (parsedUpdates.length === 0) {
+    if (toolName === 'suggest_interview_stage') {
+      const stage = parseStageCandidate(args.stage);
+      if (!stage) {
         return {
           ok: false,
-          message: 'No valid checklist updates provided.',
+          message: 'Invalid stage for suggest_interview_stage.',
         };
       }
-
-      const validIds = new Set(
-        interviewChecklistRef.current.map((item) => item.id)
-      );
-      const filtered = parsedUpdates.filter((patch) =>
-        validIds.has(patch.itemId)
-      );
-
-      if (filtered.length === 0) {
-        return {
-          ok: false,
-          message: 'Checklist update item IDs are invalid for current session.',
-        };
-      }
-
-      const normalized = filtered.map((patch) => {
-        const existing = interviewChecklistRef.current.find(
-          (item) => item.id === patch.itemId
-        );
-        if (!existing) return patch;
-
-        if (
-          patch.status === 'done' &&
-          patch.itemId === 'before_constraints' &&
-          existing.status !== 'done'
-        ) {
-          const evidenceText = (patch.evidence ?? '').toLowerCase();
-          const mentionsConstraint =
-            evidenceText.includes('constraint') ||
-            evidenceText.includes('time') ||
-            evidenceText.includes('space');
-          const mentionsEdgeCase =
-            evidenceText.includes('edge') ||
-            evidenceText.includes('case') ||
-            evidenceText.includes('empty') ||
-            evidenceText.includes('null');
-
-          if (mentionsEdgeCase !== mentionsConstraint) {
-            return {
-              ...patch,
-              status: 'partial' as const,
-            };
-          }
-        }
-
-        return patch;
-      });
 
       onInterviewStateUpdate({
-        stage: interviewStageRef.current,
-        checklist: normalized,
+        suggestedStage: stage,
+        stageReason:
+          typeof args.reason === 'string'
+            ? args.reason
+            : `Suggested transition to ${stage}.`,
       });
-      applyChecklistToRef(normalized);
       return {
         ok: true,
-        message: `Updated ${normalized.length} checklist item(s).`,
-        applied: { count: normalized.length },
+        message: `Suggested interview stage transition to ${stage}.`,
+        applied: { stage },
       };
     }
 
@@ -715,31 +724,26 @@ export function useChatSession({
 
     const summary =
       typeof args.summary === 'string'
-        ? parseScoreSummaryPayload(args.summary)
+        ? parseFinalAssessmentToken(args.summary)
         : null;
-    const resolvedScore = summary ?? finalScore;
-    if (!resolvedScore) {
+    const resolvedAssessment = summary ?? finalAssessmentRef.current;
+    const parsedScore = parseScoreCandidate(resolvedAssessment);
+    if (!parsedScore) {
       return {
         ok: false,
-        message: 'Missing deterministic score context for complete_interview.',
+        message:
+          'Missing deterministic assessment context for complete_interview.',
       };
     }
 
     onInterviewStateUpdate({
-      stage: 'completed',
-      checklist: [],
-      score: {
-        ...resolvedScore,
-        recommendation,
-      },
+      finalRecommendation: recommendation,
     });
-    interviewStageRef.current = 'completed';
 
     return {
       ok: true,
-      message: 'Interview marked completed with final score.',
+      message: 'Interview marked completed with bounded recommendation.',
       applied: {
-        stage: 'completed',
         recommendation,
       },
     };
@@ -748,7 +752,7 @@ export function useChatSession({
   const sendMessageWithToolLoop = async (
     message: string | Part[],
     opts?: { config?: Record<string, unknown> }
-  ) => {
+  ): Promise<ToolLoopResult> => {
     const runtime = toolRuntimeRef.current;
     if (!runtime) {
       throw new Error('Tool runtime unavailable');
@@ -758,9 +762,13 @@ export function useChatSession({
       message,
       config: opts?.config,
     });
+    const executedTools: ExecutedToolResult[] = [];
 
     if (!runtime.supportsTools) {
-      return response;
+      return {
+        ...response,
+        executedTools,
+      };
     }
 
     let guard = 0;
@@ -768,16 +776,16 @@ export function useChatSession({
       const functionResponses: RuntimeToolResponse[] = response.toolCalls.map(
         (call) => {
           const outcome = executeToolCall(call);
+          executedTools.push({
+            name: call.name,
+            ok: outcome.ok,
+          });
           return {
             id: call.id,
             name: call.name,
             payload: outcome.ok
-              ? {
-                  output: outcome,
-                }
-              : {
-                  error: outcome.message,
-                },
+              ? { output: outcome }
+              : { error: outcome.message },
           };
         }
       );
@@ -790,7 +798,10 @@ export function useChatSession({
       debug('Tool loop hit max iterations; returning latest response.');
     }
 
-    return response;
+    return {
+      ...response,
+      executedTools,
+    };
   };
 
   const handleSendMessage = async (
@@ -830,25 +841,7 @@ export function useChatSession({
 
     try {
       const attachedCode = options?.codeSnapshot;
-      const stageContext = [
-        `Current stage: ${interviewStageLabel || 'Before Coding'}`,
-        'Current checklist status (use itemId exactly):',
-        ...(interviewChecklist ?? []).map(
-          (item) =>
-            `- ${item.id} [${item.stage}] = ${item.status}: ${item.label}`
-        ),
-        ...(interviewChecklist && interviewChecklist.length > 0
-          ? []
-          : ['- none']),
-        ...(interviewMissingItems && interviewMissingItems.length > 0
-          ? [
-              'Missing checklist items:',
-              ...interviewMissingItems.map((item) => `- ${item}`),
-            ]
-          : ['Missing checklist items: none']),
-        'Checklist policy: prefer partial when evidence is incomplete. Specifically, before_constraints must only be done when BOTH constraints and edge cases were explicitly discussed.',
-        'If interview state changes, call tools. Do not emit custom state markup in response text.',
-      ].join('\n');
+      const stageContext = buildStatePacket(interviewStateRef.current);
 
       const messageForModel = attachedCode
         ? [
@@ -944,10 +937,11 @@ export function useChatSession({
         },
       });
       const aiText = response.text ?? '';
+      const cleanAiText = sanitizeAiDisplayText(aiText);
 
       const aiMessage: Message = {
         ...aiPlaceholder,
-        text: aiText,
+        text: cleanAiText || aiText,
         isLoading: false,
       };
 
@@ -986,7 +980,7 @@ export function useChatSession({
     const userText =
       kind === 'finish_and_rate'
         ? 'Finish and rate this interview now.'
-        : `I manually advanced the interview stage from ${context.previousStageLabel} to ${context.nextStageLabel}.`;
+        : `The interview stage changed from ${context.previousStageLabel} to ${context.nextStageLabel}.`;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -1014,27 +1008,53 @@ export function useChatSession({
       const instruction =
         kind === 'finish_and_rate'
           ? [
+              buildStatePacket(interviewStateRef.current),
+              '',
               'The interview has been marked complete by the user.',
-              'Call complete_interview exactly once with recommendation and summary. Use the score summary provided below in summary field verbatim, and base recommendation on both checklist adherence and the full conversation quality.',
+              'Call complete_interview exactly once with recommendation and summary.',
+              'Use the deterministic assessment token below in the summary field verbatim.',
               context.scoreSummary
-                ? `Current score summary: ${context.scoreSummary}`
+                ? `Deterministic assessment token: ${context.scoreSummary}`
                 : '',
             ]
               .filter(Boolean)
               .join('\n')
           : [
-              `The user manually advanced from ${context.previousStageLabel} to ${context.nextStageLabel}.`,
-              'Do not move stage backward.',
-              'Acknowledge and ask one focused next-step question.',
+              buildStatePacket(interviewStateRef.current),
+              '',
+              `The interview stage changed from ${context.previousStageLabel} to ${context.nextStageLabel}.`,
+              'Acknowledge the transition and ask one focused next-step question.',
             ].join('\n');
 
       const response = await sendMessageWithToolLoop(instruction);
-      const aiText = response.text;
+      const aiText = response.text ?? '';
       const cleanAiText = sanitizeAiDisplayText(aiText);
+      const completedViaTool = response.executedTools.some(
+        (tool: ExecutedToolResult) =>
+          tool.name === 'complete_interview' && tool.ok
+      );
+      const displayText =
+        kind === 'finish_and_rate'
+          ? completedViaTool && cleanAiText
+            ? cleanAiText
+            : buildCompletionFallbackMessage(finalAssessmentRef.current)
+          : cleanAiText || aiText;
+
+      if (kind === 'finish_and_rate' && completedViaTool && cleanAiText) {
+        onInterviewStateUpdate?.({
+          finalRationale: cleanAiText,
+        });
+      }
+
+      if (kind === 'finish_and_rate' && !completedViaTool) {
+        debug(
+          'Finish event completed without successful complete_interview tool call; using fallback message.'
+        );
+      }
 
       const aiMessage: Message = {
         ...aiPlaceholder,
-        text: cleanAiText || aiText,
+        text: displayText,
         isLoading: false,
       };
 

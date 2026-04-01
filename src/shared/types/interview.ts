@@ -6,6 +6,66 @@ export type InterviewStage =
 
 export type ChecklistStatus = 'pending' | 'partial' | 'done';
 
+export type InterviewEvidenceSource = 'llm' | 'system' | 'ui' | 'code';
+
+export type InterviewEvidenceKind =
+  | 'problem_restatement'
+  | 'constraints_discussed'
+  | 'edge_cases_discussed'
+  | 'approach_discussed'
+  | 'multiple_approaches_discussed'
+  | 'approach_selected'
+  | 'approach_rejected'
+  | 'complexity_time_discussed'
+  | 'complexity_space_discussed'
+  | 'go_ahead_given'
+  | 'coding_started'
+  | 'early_coding_violation'
+  | 'think_aloud'
+  | 'meaningful_naming'
+  | 'clean_code'
+  | 'edge_case_handling'
+  | 'walkthrough_example'
+  | 'manual_testing'
+  | 'bug_identified'
+  | 'bug_fixed'
+  | 'optimization_discussed'
+  | 'submission_detected'
+  | 'stage_transition';
+
+export type InterviewEvidencePayloadValue =
+  | string
+  | number
+  | boolean
+  | string[];
+
+export type InterviewEvidencePayload = Record<
+  string,
+  InterviewEvidencePayloadValue
+>;
+
+export type InterviewEvidenceEvent = {
+  id: string;
+  kind: InterviewEvidenceKind;
+  stageHint?: Exclude<InterviewStage, 'completed'>;
+  source: InterviewEvidenceSource;
+  turnId: string;
+  snippet: string;
+  confidence: number;
+  createdAt: number;
+  payload?: InterviewEvidencePayload;
+};
+
+export type InterviewEvidenceInput = {
+  kind: InterviewEvidenceKind;
+  stageHint?: Exclude<InterviewStage, 'completed'>;
+  source?: InterviewEvidenceSource;
+  turnId?: string;
+  snippet: string;
+  confidence?: number;
+  payload?: InterviewEvidencePayload;
+};
+
 export type InterviewChecklistItem = {
   id: string;
   stage: Exclude<InterviewStage, 'completed'>;
@@ -30,31 +90,51 @@ export type InterviewScore = {
     | 'Strong Reject';
 };
 
-export type InterviewDirectiveUpdate = {
-  itemId: string;
-  status: ChecklistStatus;
-  evidence?: string;
+export type DerivedInterviewState = {
+  stage: InterviewStage;
+  stageLabel: string;
+  coverage: InterviewChecklistItem[];
+  currentStageChecklist: InterviewChecklistItem[];
+  missingAreas: string[];
+  strengths: string[];
+  recentEvidence: string[];
+  acknowledgedAccomplishments: string[];
+  nextFollowUp: string | null;
+  approachSummary: {
+    selected?: string;
+    alternatives: string[];
+  };
+  complexityClaims: {
+    time?: string;
+    space?: string;
+  };
+  edgeCasesMentioned: string[];
+  readyToAdvance: boolean;
+  recommendedNextStage?: Exclude<InterviewStage, 'completed'>;
 };
 
-export type InterviewDirective = {
-  updates: InterviewDirectiveUpdate[];
-  action?: 'none' | 'advance' | 'complete';
+export type DerivedFinalAssessment = InterviewScore & {
+  summaryToken: string;
+  rationale?: string;
 };
 
 export type InterviewStateUpdate = {
-  stage: InterviewStage;
-  checklist: InterviewDirectiveUpdate[];
-  score?: InterviewScore;
+  events?: InterviewEvidenceInput[];
+  suggestedStage?: Exclude<InterviewStage, 'completed'>;
+  stageReason?: string;
+  finalRecommendation?: InterviewScore['recommendation'];
+  finalRationale?: string;
 };
 
 export type InterviewSession = {
+  version: 2;
   slug: string;
-  stage: InterviewStage;
-  checklist: InterviewChecklistItem[];
-  goAheadViolated?: boolean;
+  evidenceLog: InterviewEvidenceEvent[];
+  derivedState: DerivedInterviewState;
+  finalAssessment?: DerivedFinalAssessment;
   baselineNonCommentFingerprint?: string;
   startedAt: number;
   updatedAt: number;
   completedAt?: number;
-  score?: InterviewScore;
+  nextEventSeq: number;
 };
