@@ -188,4 +188,135 @@ describe('interviewRubric evidence pipeline', () => {
       'FINAL_ASSESSMENT::'
     );
   });
+
+  it('caps recommendation when core logic needed correction and hints', () => {
+    const session = recordInterviewEvidence(createStrongSession(), [
+      {
+        kind: 'hint_required',
+        source: 'llm',
+        snippet: 'Interviewer gave a hint to unblock recurrence choice.',
+      },
+      {
+        kind: 'core_logic_correction',
+        source: 'llm',
+        snippet: 'Interviewer corrected incorrect subtree merge logic.',
+      },
+    ]);
+
+    const completed = finalizeInterviewSession(session);
+    expect(completed.finalAssessment?.recommendation).toBe('Weak Hire');
+  });
+
+  it('downgrades heavily rescued interviews to weak reject at most', () => {
+    const session = recordInterviewEvidence(createStrongSession(), [
+      {
+        kind: 'hint_required',
+        source: 'llm',
+        snippet: 'Hint 1: guided candidate through base case.',
+      },
+      {
+        kind: 'hint_required',
+        source: 'llm',
+        snippet: 'Hint 2: guided candidate through recurrence.',
+      },
+      {
+        kind: 'hint_required',
+        source: 'llm',
+        snippet: 'Hint 3: guided candidate through complexity rationale.',
+      },
+      {
+        kind: 'core_logic_correction',
+        source: 'llm',
+        snippet: 'Corrected core algorithm structure.',
+      },
+      {
+        kind: 'core_logic_correction',
+        source: 'llm',
+        snippet: 'Corrected incorrect return composition.',
+      },
+    ]);
+
+    const completed = finalizeInterviewSession(session);
+    expect(completed.finalAssessment?.recommendation).toBe('Weak Reject');
+  });
+
+  it('accepts a what-if variation as post-coding follow-up evidence', () => {
+    let session = createReadyForCodingSession();
+    session = advanceInterviewStage(
+      session,
+      'during_coding',
+      'ui',
+      'Ready to start coding.'
+    );
+    session = recordInterviewEvidence(session, [
+      {
+        kind: 'think_aloud',
+        source: 'ui',
+        snippet: 'Candidate narrated the implementation.',
+      },
+      {
+        kind: 'meaningful_naming',
+        source: 'ui',
+        snippet: 'Candidate used descriptive names.',
+      },
+      {
+        kind: 'clean_code',
+        source: 'ui',
+        snippet: 'Candidate kept the implementation clean.',
+      },
+      {
+        kind: 'edge_case_handling',
+        source: 'ui',
+        snippet: 'Candidate handled duplicate values.',
+      },
+    ]);
+    session = advanceInterviewStage(
+      session,
+      'after_coding',
+      'ui',
+      'Reviewing.'
+    );
+    session = recordInterviewEvidence(session, [
+      {
+        kind: 'walkthrough_example',
+        source: 'ui',
+        snippet: 'Candidate walked through a sample input.',
+      },
+      {
+        kind: 'manual_testing',
+        source: 'ui',
+        snippet: 'Candidate manually tested edge cases.',
+      },
+      {
+        kind: 'bug_identified',
+        source: 'ui',
+        snippet: 'Candidate spotted an off-by-one issue.',
+      },
+      {
+        kind: 'bug_fixed',
+        source: 'ui',
+        snippet: 'Candidate fixed the loop bound.',
+      },
+    ]);
+
+    expect(
+      session.derivedState.coverage.find(
+        (item) => item.id === 'after_optimizations'
+      )?.status
+    ).toBe('pending');
+
+    session = recordInterviewEvidence(session, [
+      {
+        kind: 'variation_discussed',
+        source: 'ui',
+        snippet: 'Candidate discussed a streaming-input variation.',
+      },
+    ]);
+
+    expect(
+      session.derivedState.coverage.find(
+        (item) => item.id === 'after_optimizations'
+      )?.status
+    ).toBe('done');
+  });
 });

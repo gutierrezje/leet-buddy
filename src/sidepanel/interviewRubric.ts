@@ -41,6 +41,10 @@ export const INTERVIEW_EVIDENCE_KINDS: InterviewEvidenceKind[] = [
   'bug_identified',
   'bug_fixed',
   'optimization_discussed',
+  'variation_discussed',
+  'uncertainty_signal',
+  'hint_required',
+  'core_logic_correction',
   'submission_detected',
   'stage_transition',
 ];
@@ -367,15 +371,18 @@ const COVERAGE_SPECS: CoverageSpec[] = [
   {
     id: 'after_optimizations',
     stage: 'after_coding',
-    label: 'Discussed potential optimizations',
-    strengthLabel: 'Discussed follow-up optimizations',
+    label: 'Discussed optimization or follow-up variation',
+    strengthLabel: 'Discussed optimization or problem variations',
     evaluate: (events) =>
       makeCoverageItem(
         'after_optimizations',
         'after_coding',
-        'Discussed potential optimizations',
-        hasEvent(events, 'optimization_discussed') ? 'done' : 'pending',
-        snippetsFor(events, ['optimization_discussed'])
+        'Discussed optimization or follow-up variation',
+        hasEvent(events, 'optimization_discussed') ||
+          hasEvent(events, 'variation_discussed')
+          ? 'done'
+          : 'pending',
+        snippetsFor(events, ['optimization_discussed', 'variation_discussed'])
       ),
   },
 ];
@@ -404,6 +411,73 @@ function recommendationFromScore(
   if (overall >= 60) return 'Weak Reject';
   if (overall >= 45) return 'Reject';
   return 'Strong Reject';
+}
+
+function countEvents(
+  events: InterviewEvidenceEvent[],
+  kind: InterviewEvidenceKind,
+  minConfidence = 0.5
+): number {
+  return events.filter(
+    (event) => event.kind === kind && eventConfidence(event) >= minConfidence
+  ).length;
+}
+
+function deriveGuidancePenalty(events: InterviewEvidenceEvent[]): number {
+  const uncertaintyCount = countEvents(events, 'uncertainty_signal', 0.45);
+  const hintsCount = countEvents(events, 'hint_required', 0.45);
+  const coreCorrectionCount = countEvents(
+    events,
+    'core_logic_correction',
+    0.45
+  );
+
+  const uncertaintyPenalty = Math.min(12, uncertaintyCount * 2);
+  const hintPenalty = Math.min(20, hintsCount * 5);
+  const correctionPenalty = Math.min(24, coreCorrectionCount * 8);
+
+  return Math.min(40, uncertaintyPenalty + hintPenalty + correctionPenalty);
+}
+
+function capRecommendationForGuidance(
+  recommendation: InterviewScore['recommendation'],
+  events: InterviewEvidenceEvent[]
+): InterviewScore['recommendation'] {
+  const ordered: InterviewScore['recommendation'][] = [
+    'Strong Reject',
+    'Reject',
+    'Weak Reject',
+    'Weak Hire',
+    'Hire',
+    'Strong Hire',
+  ];
+  const uncertaintyCount = countEvents(events, 'uncertainty_signal', 0.45);
+  const hintsCount = countEvents(events, 'hint_required', 0.45);
+  const coreCorrectionCount = countEvents(
+    events,
+    'core_logic_correction',
+    0.45
+  );
+
+  let maxAllowed: InterviewScore['recommendation'] | null = null;
+  if (coreCorrectionCount >= 2 || hintsCount >= 3) {
+    maxAllowed = 'Weak Reject';
+  } else if (
+    coreCorrectionCount >= 1 ||
+    hintsCount >= 1 ||
+    uncertaintyCount >= 3
+  ) {
+    maxAllowed = 'Weak Hire';
+  }
+
+  if (!maxAllowed) return recommendation;
+
+  const recommendationIndex = ordered.indexOf(recommendation);
+  const maxAllowedIndex = ordered.indexOf(maxAllowed);
+  if (recommendationIndex <= maxAllowedIndex) {
+    return recommendation;
+  }
+  return maxAllowed;
 }
 
 function getLastStageTransition(
@@ -444,7 +518,8 @@ function deriveStage(
     hasEvent(events, 'walkthrough_example', 0.4) ||
     hasEvent(events, 'manual_testing', 0.4) ||
     hasEvent(events, 'bug_fixed', 0.4) ||
-    hasEvent(events, 'optimization_discussed', 0.4);
+    hasEvent(events, 'optimization_discussed', 0.4) ||
+    hasEvent(events, 'variation_discussed', 0.4);
 
   if (sawAfterEvidence) return 'after_coding';
 
@@ -580,7 +655,7 @@ export function computeInterviewScore(
     Math.max(0, Math.round((1800 / elapsedSec) * 10000) / 100)
   );
 
-  const overall =
+  const rawOverall =
     Math.round(
       (dsa * 0.3 +
         communication * 0.2 +
@@ -590,6 +665,16 @@ export function computeInterviewScore(
         100
     ) / 100;
 
+  const guidancePenalty = deriveGuidancePenalty(session.evidenceLog);
+  const overall = Math.max(
+    0,
+    Math.round((rawOverall - guidancePenalty) * 100) / 100
+  );
+  const recommendation = capRecommendationForGuidance(
+    recommendationFromScore(overall),
+    session.evidenceLog
+  );
+
   return {
     dsa,
     communication,
@@ -597,7 +682,7 @@ export function computeInterviewScore(
     testing,
     speed,
     overall,
-    recommendation: recommendationFromScore(overall),
+    recommendation,
   };
 }
 

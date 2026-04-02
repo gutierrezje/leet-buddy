@@ -30,6 +30,10 @@ export type InterviewEvidenceKind =
   | 'bug_identified'
   | 'bug_fixed'
   | 'optimization_discussed'
+  | 'variation_discussed'
+  | 'uncertainty_signal'
+  | 'hint_required'
+  | 'core_logic_correction'
   | 'submission_detected'
   | 'stage_transition';
 
